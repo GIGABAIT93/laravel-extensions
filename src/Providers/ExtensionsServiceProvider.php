@@ -47,7 +47,7 @@ class ExtensionsServiceProvider extends ServiceProvider
 
         // Dynamically load active extensions.
         $extensionManager = new ExtensionManager();
-        $activeExtensions = $extensionManager->get()->filter(function ($e) {
+        $activeExtensions = $extensionManager->all()->filter(function ($e) {
             return $e->active ?? $e['active'];
         });
 

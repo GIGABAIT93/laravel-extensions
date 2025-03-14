@@ -13,7 +13,7 @@ class ListCommand extends Command
     public function handle(): void
     {
         $manager = new ExtensionManager();
-        $extensions = $manager->get();
+        $extensions = $manager->all();
 
         if ($extensions->isEmpty()) {
             $this->info('There are no extensions installed.');

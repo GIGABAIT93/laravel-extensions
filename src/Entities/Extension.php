@@ -20,4 +20,36 @@ class Extension
         $this->updated_at = $data['updated_at'] ?? null;
         $this->attributes = $data;
     }
+    
+    /**
+     * Get the extension name.
+     */
+    public function getName(): string
+    {
+        return $this->attributes['name'] ?? '';
+    }
+
+    /**
+     * Get the extension type.
+     */
+    public function getType(): ?string
+    {
+        return $this->attributes['type'] ?? null;
+    }
+
+    /**
+     * Check if the extension is active.
+     */
+    public function isActive(): bool
+    {
+        return $this->attributes['active'] ?? false;
+    }
+
+    /**
+     * Get the raw extension data.
+     */
+    public function getData(): array
+    {
+        return $this->attributes;
+    }
 }
