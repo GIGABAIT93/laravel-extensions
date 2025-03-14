@@ -1,7 +1,6 @@
 <?php
-// src/Entities/Extension.php
 
-namespace Gigabait93\Modules\Entities;
+namespace Gigabait93\Extensions\Entities;
 
 class Extension
 {
