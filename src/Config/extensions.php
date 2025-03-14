@@ -10,7 +10,7 @@ return [
     | For example: [base_path('Extensions'), resource_path('extensions')]
     */
     'extensions_paths' => [
-        base_path('Modules'),
+        base_path('modules'),
     ],
 
     /*
