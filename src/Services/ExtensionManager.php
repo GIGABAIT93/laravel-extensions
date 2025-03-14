@@ -35,7 +35,7 @@ class ExtensionManager
     /**
      * Retrieve the list of extensions from storage (database or file).
      */
-    public function getExtensions(): Collection
+    public function get(): Collection
     {
         if ($this->storage === 'database' && $this->hasDatabase()) {
             return DB::table($this->extensionsTable)->get();
@@ -118,7 +118,7 @@ class ExtensionManager
             ]);
             return "Extension '{$extension}' installed successfully.";
         } else {
-            $extensions = $this->getExtensions()->toArray();
+            $extensions = $this->get()->toArray();
             foreach ($extensions as &$e) {
                 if ($e['name'] === $extension) {
                     if ($type !== null) {
@@ -154,7 +154,7 @@ class ExtensionManager
                 ->update(['active' => true, 'updated_at' => now()]);
             return $updated ? "Extension '{$extension}' enabled." : "Extension '{$extension}' not found.";
         } else {
-            $extensions = $this->getExtensions()->toArray();
+            $extensions = $this->get()->toArray();
             $found = false;
             foreach ($extensions as &$e) {
                 if ($e['name'] === $extension) {
@@ -186,7 +186,7 @@ class ExtensionManager
                 ->update(['active' => false, 'updated_at' => now()]);
             return $updated ? "Extension '{$extension}' disabled." : "Extension '{$extension}' not found.";
         } else {
-            $extensions = $this->getExtensions()->toArray();
+            $extensions = $this->get()->toArray();
             $found = false;
             foreach ($extensions as &$e) {
                 if ($e['name'] === $extension) {
@@ -224,7 +224,7 @@ class ExtensionManager
                 return "Extension '{$extension}' not found in database.";
             }
         } else {
-            $extensions = $this->getExtensions()->toArray();
+            $extensions = $this->get()->toArray();
             $originalCount = count($extensions);
             $extensions = array_filter($extensions, function ($e) use ($extension) {
                 return $e['name'] !== $extension;
@@ -276,13 +276,13 @@ class ExtensionManager
      *   - 'added': list of extensions that were added.
      *   - 'deleted': list of extensions that were deleted.
      */
-    public function discoverAndSyncExtensions(): array
+    public function discoverAndSync(): array
     {
         // Get extensions found in the filesystem (directories with extension.json)
         $foundExtensions = $this->discoverExtensions();
 
         // Get the current extensions from storage (database or file)
-        $storedExtensions = $this->getExtensions()->toArray();
+        $storedExtensions = $this->get()->toArray();
         $storedExtensionNames = array_map(function ($item) {
             return $item->name ?? $item['name'];
         }, $storedExtensions);
@@ -309,7 +309,7 @@ class ExtensionManager
      */
     public function getExtensionsByType(string $type): Collection
     {
-        return $this->getExtensions()->filter(function ($e) use ($type) {
+        return $this->get()->filter(function ($e) use ($type) {
             return ($e->type ?? $e['type']) === $type;
         });
     }
