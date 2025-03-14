@@ -3,7 +3,7 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
-use Gigabait93\Extensions\Services\ExtensionsManager;
+use Gigabait93\Extensions\Services\ExtensionManager;
 
 class InstallCommand extends Command
 {
@@ -14,7 +14,7 @@ class InstallCommand extends Command
     {
         $extension = $this->argument('extension');
         $type = $this->option('type') ?: null;
-        $manager = new ExtensionsManager();
+        $manager = new ExtensionManager();
         $result = $manager->install($extension, $type);
         $this->info($result);
     }
