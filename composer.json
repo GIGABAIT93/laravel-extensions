@@ -24,5 +24,7 @@
                 "Gigabait93\\Extensions\\Providers\\ExtensionsServiceProvider"
             ]
         }
-    }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }
