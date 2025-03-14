@@ -7,15 +7,14 @@ use Gigabait93\Extensions\Services\ExtensionManager;
 
 class InstallCommand extends Command
 {
-    protected $signature = 'extension:install {extension} {--type=}';
+    protected $signature = 'extension:install {extension}';
     protected $description = 'Set up a new extension';
 
     public function handle(): void
     {
         $extension = $this->argument('extension');
-        $type = $this->option('type') ?: null;
         $manager = new ExtensionManager();
-        $result = $manager->install($extension, $type);
+        $result = $manager->install($extension);
         $this->info($result);
     }
 }

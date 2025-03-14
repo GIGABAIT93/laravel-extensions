@@ -86,10 +86,9 @@ class ExtensionManager
      * with an extension.json file. If the extension type is not provided, it is read from extension.json.
      *
      * @param string $extension Extension name.
-     * @param string|null $type Optional extension type.
      * @return string Result message.
      */
-    public function install(string $extension, ?string $type = null): string
+    public function install(string $extension): string
     {
         $foundPath = null;
         foreach ($this->extensionsPaths as $path) {
@@ -103,22 +102,26 @@ class ExtensionManager
             return "Extension '{$extension}' not found in the configured paths.";
         }
 
-        // Read the extension configuration to get the type if not provided.
+        // Read the extension configuration and use the 'type' from file (default to 'extension' if not present)
         $extensionJsonPath = $foundPath . DIRECTORY_SEPARATOR . 'extension.json';
         $extensionConfig = json_decode(File::get($extensionJsonPath), true);
-        if ($type === null && isset($extensionConfig['type'])) {
-            $type = $extensionConfig['type'];
-        }
-        $type = $type ?? 'extension';
+        $type = isset($extensionConfig['type']) ? $extensionConfig['type'] : 'extension';
+
+        $currentTime = now();
 
         // Registration process is intentionally left empty.
         if ($this->storage === 'database' && $this->hasDatabase()) {
             $existing = DB::table($this->extensionsTable)->where('name', $extension)->first();
             if ($existing) {
+                // Update all fields (type and updated_at) except 'active'
                 if ($existing->type !== $type) {
                     DB::table($this->extensionsTable)
                         ->where('name', $extension)
-                        ->update(['type' => $type, 'updated_at' => now()]);
+                        ->update(['type' => $type, 'updated_at' => $currentTime]);
+                } else {
+                    DB::table($this->extensionsTable)
+                        ->where('name', $extension)
+                        ->update(['updated_at' => $currentTime]);
                 }
                 return "Extension '{$extension}' is already installed.";
             }
@@ -126,30 +129,38 @@ class ExtensionManager
                 'name'       => $extension,
                 'type'       => $type,
                 'active'     => false,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $currentTime,
+                'updated_at' => $currentTime,
             ]);
             return "Extension '{$extension}' installed successfully.";
         } else {
+            // Get the raw extension data from file storage and update all fields except 'active'
             $extensions = $this->all()->map(fn($ext) => $ext->getData())->toArray();
             foreach ($extensions as &$e) {
                 if ($e['name'] === $extension) {
-                    $e['type'] = $type;
+                    // Preserve the current 'active' status.
+                    $activeStatus = $e['active'] ?? false;
+                    $e = array_merge($e, [
+                        'type'       => $type,
+                        'updated_at' => $currentTime->toDateTimeString(),
+                    ]);
+                    $e['active'] = $activeStatus;
                     $this->saveExtensions($extensions);
-                    return "Extension '{$extension}' is already installed (file).";
+                    return "Extension '{$extension}' is already installed (file) and data updated.";
                 }
             }
             $extensions[] = [
                 'name'       => $extension,
                 'type'       => $type,
                 'active'     => false,
-                'created_at' => now()->toDateTimeString(),
-                'updated_at' => now()->toDateTimeString(),
+                'created_at' => $currentTime->toDateTimeString(),
+                'updated_at' => $currentTime->toDateTimeString(),
             ];
             $this->saveExtensions($extensions);
             return "Extension '{$extension}' installed successfully (file).";
         }
     }
+
 
     /**
      * Enable an extension.
@@ -288,21 +299,28 @@ class ExtensionManager
      */
     public function discoverAndSync(): array
     {
+        // Get the list of extension names from all configured paths.
         $foundExtensions = $this->discoverExtensions();
+
+        // For each found extension, call install() to update its data.
+        // This will update the type and timestamps, preserving the "active" status.
+        $updated = [];
+        foreach ($foundExtensions as $extensionName) {
+            $this->install($extensionName);
+            $updated[] = $extensionName;
+        }
+
+        // Get the current list of extension names from storage.
         $storedExtensions = $this->all()->map(fn($ext) => $ext->getData())->toArray();
         $storedExtensionNames = array_map(fn($item) => $item['name'], $storedExtensions);
 
-        $added = array_diff($foundExtensions, $storedExtensionNames);
+        // Determine which stored extensions are no longer found in the filesystem.
         $deleted = array_diff($storedExtensionNames, $foundExtensions);
-
         foreach ($deleted as $extensionName) {
             $this->delete($extensionName);
         }
-        foreach ($added as $extensionName) {
-            $this->install($extensionName);
-        }
 
-        return ['added' => array_values($added), 'deleted' => array_values($deleted)];
+        return ['updated' => array_values($updated), 'deleted' => array_values($deleted)];
     }
 
     /**

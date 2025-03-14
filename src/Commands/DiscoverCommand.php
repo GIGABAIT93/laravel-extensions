@@ -18,7 +18,7 @@ class DiscoverCommand extends Command
         if (empty($data)) {
             $this->info('There are no new synchronization extensions.');
         } else {
-            $this->info('Added: ' . count($data['added'] ?? []) . '. Deleted: ' . count($data['deleted'] ?? []) . '.');
+            $this->info('Updated: ' . count($data['updated'] ?? []) . '. Deleted: ' . count($data['deleted'] ?? []) . '.');
         }
     }
 }
