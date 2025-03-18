@@ -146,7 +146,7 @@ class ExtensionManager
                     ]);
                     $e['active'] = $activeStatus;
                     $this->saveExtensions($extensions);
-                    return "Extension '{$extension}' is already installed (file) and data updated.";
+                    return "Extension '{$extension}' is already installed and data updated.";
                 }
             }
             $extensions[] = [
@@ -157,7 +157,7 @@ class ExtensionManager
                 'updated_at' => $currentTime->toDateTimeString(),
             ];
             $this->saveExtensions($extensions);
-            return "Extension '{$extension}' installed successfully (file).";
+            return "Extension '{$extension}' installed successfully.";
         }
     }
 
@@ -190,7 +190,7 @@ class ExtensionManager
                 return "Extension '{$extension}' not found in file storage.";
             }
             $this->saveExtensions($extensions);
-            return "Extension '{$extension}' enabled (file).";
+            return "Extension '{$extension}' enabled.";
         }
     }
 
@@ -222,7 +222,7 @@ class ExtensionManager
                 return "Extension '{$extension}' not found in file storage.";
             }
             $this->saveExtensions($extensions);
-            return "Extension '{$extension}' disabled (file).";
+            return "Extension '{$extension}' disabled.";
         }
     }
 
