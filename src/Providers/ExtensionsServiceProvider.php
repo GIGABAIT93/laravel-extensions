@@ -28,22 +28,21 @@ class ExtensionsServiceProvider extends ServiceProvider
         ], 'config');
 
         // Register console commands when running in the console.
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                InstallCommand::class,
-                ListCommand::class,
-                EnableCommand::class,
-                DisableCommand::class,
-                DeleteCommand::class,
-                DiscoverCommand::class,
-            ]);
+        $this->commands([
+            InstallCommand::class,
+            ListCommand::class,
+            EnableCommand::class,
+            DisableCommand::class,
+            DeleteCommand::class,
+            DiscoverCommand::class,
+        ]);
 
-            // Schedule the extension:discover command to run every five minutes.
-            $this->app->booted(function () {
-                $schedule = $this->app->make(Schedule::class);
-                $schedule->command('extension:discover')->everyFiveMinutes();
-            });
-        }
+        // Schedule the extension:discover command to run every five minutes.
+        $this->app->booted(function () {
+            $schedule = $this->app->make(Schedule::class);
+            $schedule->command('extension:discover')->everyFiveMinutes();
+        });
+
 
         // Dynamically load active extensions.
         $extensionManager = new ExtensionManager();
