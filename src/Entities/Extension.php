@@ -4,52 +4,48 @@ namespace Gigabait93\Extensions\Entities;
 
 class Extension
 {
-    public string $name;
-    public string $type;
-    public bool $active;
-    public ?string $created_at;
-    public ?string $updated_at;
-    public array $attributes;
+    protected string $name;
+    protected string $type;
+    protected bool $active;
+    protected array $meta;
 
     public function __construct(array $data)
     {
-        $this->name       = $data['name'] ?? '';
-        $this->type       = $data['type'] ?? '';
-        $this->active     = $data['active'] ?? false;
-        $this->created_at = $data['created_at'] ?? null;
-        $this->updated_at = $data['updated_at'] ?? null;
-        $this->attributes = $data;
+        $this->name   = $data['name'] ?? '';
+        $this->type   = $data['type'] ?? '';
+        $this->active = $data['active'] ?? false;
+        $this->meta   = $data;
     }
-    
+
     /**
-     * Get the extension name.
+     * Returns the extension name.
      */
     public function getName(): string
     {
-        return $this->attributes['name'] ?? '';
+        return $this->name;
     }
 
     /**
-     * Get the extension type.
+     * Returns the extension type.
      */
-    public function getType(): ?string
+    public function getType(): string
     {
-        return $this->attributes['type'] ?? null;
+        return $this->type;
     }
 
     /**
-     * Check if the extension is active.
+     * Checks if the extension is active.
      */
     public function isActive(): bool
     {
-        return $this->attributes['active'] ?? false;
+        return $this->active;
     }
 
     /**
-     * Get the raw extension data.
+     * Returns the raw extension data.
      */
     public function getData(): array
     {
-        return $this->attributes;
+        return $this->meta;
     }
 }

@@ -21,9 +21,9 @@ class ListCommand extends Command
         }
 
         $data = $extensions->map(function ($item) {
-            $name = $item->name ?? $item['name'];
-            $active = ($item->active ?? $item['active']) ? 'active' : 'inactive';
-            $type = $item->type ?? ($item['type'] ?? '');
+            $name = $item->getName() ?? $item['name'];
+            $active = ($item->isActive() ?? $item['active']) ? 'active' : 'inactive';
+            $type = $item->getType() ?? ($item['type'] ?? '');
             return [
                 'Name'   => $name,
                 'Status' => $active,

@@ -2,6 +2,7 @@
 
 namespace Gigabait93\Extensions\Providers;
 
+use Gigabait93\Extensions\Entities\Extension;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Gigabait93\Extensions\Services\ExtensionManager;
@@ -16,18 +17,15 @@ class ExtensionsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Merge package configuration with application's configuration.
         $this->mergeConfigFrom(__DIR__ . '/../Config/extensions.php', 'extensions');
     }
 
     public function boot(): void
     {
-        // Publish the configuration file.
         $this->publishes([
             __DIR__ . '/../Config/extensions.php' => config_path('extensions.php'),
         ], 'config');
 
-        // Register console commands when running in the console.
         $this->commands([
             InstallCommand::class,
             ListCommand::class,
@@ -37,39 +35,39 @@ class ExtensionsServiceProvider extends ServiceProvider
             DiscoverCommand::class,
         ]);
 
-        // Schedule the extension:discover command to run every five minutes.
         $this->app->booted(function () {
-            $schedule = $this->app->make(Schedule::class);
-            $schedule->command('extension:discover')->everyFiveMinutes();
+            $this->app->make(Schedule::class)
+                ->command('extension:discover')
+                ->everyFiveMinutes();
         });
 
-
-        // Dynamically load active extensions.
         $extensionManager = new ExtensionManager();
-        $activeExtensions = $extensionManager->all()->filter(function ($e) {
-            return $e->active ?? $e['active'];
-        });
+        $activeExtensions = $extensionManager->all()->filter(fn(Extension $extension) => $extension->isActive());
 
-        foreach ($activeExtensions as $extension) {
-            $extensionName = $extension->name ?? $extension['name'];
-            $registered = false;
-            // Loop through all configured extension paths.
-            foreach (config('extensions.extensions_paths') as $path) {
-                $extensionJsonPath = $path . DIRECTORY_SEPARATOR . $extensionName . DIRECTORY_SEPARATOR . 'extension.json';
-                if (!file_exists($extensionJsonPath)) {
-                    continue;
-                }
-                $jsonContent = file_get_contents($extensionJsonPath);
-                $extensionConfig = json_decode($jsonContent, true);
-                if (empty($extensionConfig['provider'])) {
-                    continue;
-                }
-                $providerClass = $extensionConfig['provider'];
-                if (class_exists($providerClass)) {
-                    $this->app->register($providerClass);
-                    $registered = true;
-                    break;
-                }
+        $activeExtensions->each(function (Extension $extension) {
+            $this->registerExtensionProvider($extension);
+        });
+    }
+
+    /**
+     * Registers an extension provider if it exists.
+     */
+    protected function registerExtensionProvider(Extension $extension): void
+    {
+        $extensionName = $extension->getName();
+        foreach (config('extensions.extensions_paths') as $path) {
+            $configPath = $path . DIRECTORY_SEPARATOR . $extensionName . DIRECTORY_SEPARATOR . 'extension.json';
+            if (!file_exists($configPath)) {
+                continue;
+            }
+            $configData = json_decode(file_get_contents($configPath), true);
+            if (empty($configData['provider'])) {
+                continue;
+            }
+            $providerClass = $configData['provider'];
+            if (class_exists($providerClass)) {
+                $this->app->register($providerClass);
+                break;
             }
         }
     }

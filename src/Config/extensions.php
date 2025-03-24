@@ -1,5 +1,4 @@
 <?php
-// src/Config/extensions.php
 
 return [
     /*
@@ -15,24 +14,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Storage Method for Extension Statuses
+    | Activator Class
     |--------------------------------------------------------------------------
-    | Possible values: "database" or "file".
-    | The default value is determined by the environment variable EXTENSIONS_ACTIVATOR.
+    | The class responsible for managing the activation and deactivation of extensions.
     */
-    'storage' => env('EXTENSIONS_ACTIVATOR', 'file'),
+    'activator' => \Gigabait93\Extensions\Activators\FileActivator::class,
 
     /*
     |--------------------------------------------------------------------------
     | JSON File for File Storage
     |--------------------------------------------------------------------------
     */
-    'json_file' => storage_path('extensions.json'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Table for Database Storage
-    |--------------------------------------------------------------------------
-    */
-    'table' => 'extensions',
+    'json_file' => base_path('extensions.json'),
 ];
