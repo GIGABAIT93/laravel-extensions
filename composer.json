@@ -1,6 +1,6 @@
 {
     "name": "gigabait93/laravel-extensions",
-    "description": "Extensions Laravel system with the possibility of dynamic switching on/off extensions",
+    "description": "Extensions Laravel system",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -16,10 +16,7 @@
     "autoload": {
         "psr-4": {
             "Gigabait93\\Extensions\\": "src/"
-        },
-        "files": [
-            "src/helper.php"
-        ]
+        }
     },
     "extra": {
         "laravel": {
