@@ -55,7 +55,7 @@ class FileActivator
      * Saves or updates a single extension record.
      * Only "type" and "active" are updated. If the record does not exist, it is created.
      */
-    public function saveExtensionRecord(string $extension, array $data, bool $createIfNotExists = true): bool
+    public function saveExtensionRecord(string $extension, array $data): bool
     {
         // Filter data to allow only "type" and "active"
         $data = array_intersect_key($data, array_flip(['type', 'active']));
@@ -68,11 +68,9 @@ class FileActivator
                 break;
             }
         }
-        if (!$found && $createIfNotExists) {
+        if (!$found) {
             $newRecord = $this->sanitizeRecord(array_merge(['name' => $extension], $data));
             $records[] = $newRecord;
-        } elseif (!$found) {
-            return false;
         }
         $this->saveExtensions($records);
         return true;
@@ -83,7 +81,7 @@ class FileActivator
      */
     public function setActive(string $extension, bool $status): bool
     {
-        return $this->saveExtensionRecord($extension, ['active' => $status], true);
+        return $this->saveExtensionRecord($extension, ['active' => $status]);
     }
 
     /**
