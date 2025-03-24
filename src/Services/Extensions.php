@@ -77,7 +77,7 @@ class Extensions
             return "Extension '{$extension}' not found in the configured paths.";
         }
         $type = $config['type'] ?? 'module';
-        $result = $this->activator->saveExtensionRecord($extension, ['type' => $type], true);
+        $result = $this->activator->saveExtensionRecord($extension, ['type' => $type]);
         return $result
             ? "Extension '{$extension}' installed/updated successfully."
             : "Failed to install/update extension '{$extension}'.";
