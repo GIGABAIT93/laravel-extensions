@@ -16,7 +16,10 @@
     "autoload": {
         "psr-4": {
             "Gigabait93\\Extensions\\": "src/"
-        }
+        },
+        "files": [
+            "src/helper.php"
+        ]
     },
     "extra": {
         "laravel": {

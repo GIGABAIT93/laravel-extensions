@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\File;
 use Gigabait93\Extensions\Entities\Extension;
 use Gigabait93\Extensions\Activators\FileActivator;
 
-class ExtensionManager
+class Extensions
 {
     protected object $activator;
     protected array $extensionsPaths;

@@ -3,7 +3,7 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
-use Gigabait93\Extensions\Services\ExtensionManager;
+use Gigabait93\Extensions\Services\Extensions;
 
 class DiscoverCommand extends Command
 {
@@ -12,7 +12,7 @@ class DiscoverCommand extends Command
 
     public function handle(): void
     {
-        $manager = new ExtensionManager();
+        $manager = new Extensions();
         $data = $manager->discoverAndSync();
 
         if (empty($data)) {

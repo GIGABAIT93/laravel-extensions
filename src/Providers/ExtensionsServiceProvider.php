@@ -5,7 +5,7 @@ namespace Gigabait93\Extensions\Providers;
 use Gigabait93\Extensions\Entities\Extension;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
-use Gigabait93\Extensions\Services\ExtensionManager;
+use Gigabait93\Extensions\Services\Extensions;
 use Gigabait93\Extensions\Commands\InstallCommand;
 use Gigabait93\Extensions\Commands\ListCommand;
 use Gigabait93\Extensions\Commands\EnableCommand;
@@ -41,7 +41,7 @@ class ExtensionsServiceProvider extends ServiceProvider
                 ->everyFiveMinutes();
         });
 
-        $extensionManager = new ExtensionManager();
+        $extensionManager = new Extensions();
         $activeExtensions = $extensionManager->all()->filter(fn(Extension $extension) => $extension->isActive());
 
         $activeExtensions->each(function (Extension $extension) {

@@ -3,7 +3,7 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
-use Gigabait93\Extensions\Services\ExtensionManager;
+use Gigabait93\Extensions\Services\Extensions;
 
 class DisableCommand extends Command
 {
@@ -13,7 +13,7 @@ class DisableCommand extends Command
     public function handle(): void
     {
         $extension = $this->argument('extension');
-        $manager = new ExtensionManager();
+        $manager = new Extensions();
         $result = $manager->disable($extension);
         $this->info($result);
     }
