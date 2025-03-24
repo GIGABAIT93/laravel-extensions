@@ -13,7 +13,7 @@ class EnableCommand extends Command
     public function handle(): void
     {
         $extension = $this->argument('extension');
-        $manager = new Extensions();
+        $manager = Extensions::getInstance();
         $result = $manager->enable($extension);
         $this->info($result);
     }

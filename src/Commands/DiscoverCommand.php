@@ -12,13 +12,13 @@ class DiscoverCommand extends Command
 
     public function handle(): void
     {
-        $manager = new Extensions();
-        $data = $manager->discoverAndSync();
+        $manager = Extensions::getInstance();
+        $data = $manager->discover();
 
         if (empty($data)) {
             $this->info('There are no new synchronization extensions.');
         } else {
-            $this->info('Updated: ' . count($data['updated'] ?? []) . '. Deleted: ' . count($data['deleted'] ?? []) . '.');
+            $this->info('The following extensions have been synchronized: ' . implode(', ', $data));
         }
     }
 }

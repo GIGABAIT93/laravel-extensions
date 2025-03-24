@@ -12,7 +12,7 @@ class ListCommand extends Command
 
     public function handle(): void
     {
-        $manager = new Extensions();
+        $manager = Extensions::getInstance();
         $extensions = $manager->all();
 
         if ($extensions->isEmpty()) {

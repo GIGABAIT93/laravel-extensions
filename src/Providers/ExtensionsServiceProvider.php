@@ -18,6 +18,11 @@ class ExtensionsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../Config/extensions.php', 'extensions');
+
+        // Register the Extensions service as a singleton.
+        $this->app->singleton(Extensions::class, function ($app) {
+            return Extensions::getInstance();
+        });
     }
 
     public function boot(): void
@@ -41,7 +46,8 @@ class ExtensionsServiceProvider extends ServiceProvider
                 ->everyFiveMinutes();
         });
 
-        $extensionManager = new Extensions();
+        // Use the singleton instance of Extensions.
+        $extensionManager = app(Extensions::class);
         $activeExtensions = $extensionManager->all()->filter(fn(Extension $extension) => $extension->isActive());
 
         $activeExtensions->each(function (Extension $extension) {

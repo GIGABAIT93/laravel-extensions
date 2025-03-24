@@ -13,7 +13,7 @@ class DisableCommand extends Command
     public function handle(): void
     {
         $extension = $this->argument('extension');
-        $manager = new Extensions();
+        $manager = Extensions::getInstance();
         $result = $manager->disable($extension);
         $this->info($result);
     }

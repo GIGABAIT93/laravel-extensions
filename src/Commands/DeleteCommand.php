@@ -13,7 +13,7 @@ class DeleteCommand extends Command
     public function handle(): void
     {
         $extension = $this->argument('extension');
-        $manager = new Extensions();
+        $manager = Extensions::getInstance();
         $result = $manager->delete($extension);
         $this->info($result);
     }
