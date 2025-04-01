@@ -232,4 +232,15 @@ class Extensions
     {
         return $this->all()->filter(fn($e) => ($e->isActive() ?? false) === $active);
     }
+
+    /**
+     * Filters extensions by their active status and type.
+     */
+    public function getActiveByType(string $type): Collection
+    {
+        return $this->all()->filter(fn($e) => ($e->isActive() ?? false) && ($e->getType() ?? null) === $type);
+    }
+
+
+
 }
