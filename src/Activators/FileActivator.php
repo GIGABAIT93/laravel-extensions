@@ -2,37 +2,33 @@
 
 namespace Gigabait93\Extensions\Activators;
 
+use Gigabait93\Extensions\Contracts\ActivatorInterface;
 use Illuminate\Support\Facades\File;
 
-class FileActivator
+class FileActivator implements ActivatorInterface
 {
     protected string $jsonFile;
 
     public function __construct()
     {
         $config = config('extensions');
-        $this->jsonFile = $config['json_file'] ?? base_path('extensions.json');
+        $this->jsonFile = $config['json_file'] ?? base_path('storage/extensions.json');
     }
 
     public function getStatuses(): array
     {
-        if (File::exists($this->jsonFile)) {
-            $data = json_decode(File::get($this->jsonFile), true);
-            return is_array($data) ? $data : [];
+        if (! File::exists($this->jsonFile)) {
+            return [];
         }
-        return [];
+
+        $data = json_decode(File::get($this->jsonFile), true);
+        return is_array($data) ? $data : [];
     }
 
     public function setStatus(string $extension, bool $status): bool
     {
         $statuses = $this->getStatuses();
         $statuses[$extension] = $status;
-        $this->saveStatuses($statuses);
-        return true;
-    }
-
-    protected function saveStatuses(array $statuses): void
-    {
-        File::put($this->jsonFile, json_encode($statuses, JSON_PRETTY_PRINT));
+        return File::put($this->jsonFile, json_encode($statuses, JSON_PRETTY_PRINT)) !== false;
     }
 }
