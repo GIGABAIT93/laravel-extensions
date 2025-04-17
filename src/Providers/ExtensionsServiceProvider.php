@@ -43,10 +43,10 @@ class ExtensionsServiceProvider extends ServiceProvider
         // Publication of Configers and Migrations
         $this->publishes([
             __DIR__ . '/../../config/extensions.php' => config_path('extensions.php'),
-        ], 'config');
+        ], 'extensions');
         $this->publishes([
             __DIR__ . '/../../database/migrations' => database_path('migrations'),
-        ], 'migrations');
+        ], 'extensions');
 
         // Artisan commands
         $this->commands([
