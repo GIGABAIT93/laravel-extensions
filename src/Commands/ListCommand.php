@@ -4,6 +4,7 @@ namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
 use Gigabait93\Extensions\Services\Extensions;
+use Illuminate\Support\Facades\App;
 
 class ListCommand extends Command
 {
@@ -12,7 +13,7 @@ class ListCommand extends Command
 
     public function handle(): void
     {
-        $manager = Extensions::getInstance();
+        $manager = App::make(Extensions::class);
         $extensions = $manager->all();
 
         if ($extensions->isEmpty()) {

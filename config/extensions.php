@@ -1,6 +1,28 @@
 <?php
 
 return [
+
+    /*
+    |----------------------------------------------------------------------
+    | Protected extensions and automatic activation
+    |----------------------------------------------------------------------
+    | List of extensions that are forbidden to turn off or delete.
+    */
+    'protected' => [
+        'Themer',
+    ],
+
+    /*
+    |----------------------------------------------------------------------
+    | Load order
+    |----------------------------------------------------------------------
+    | Hard order loading active extensions.
+    | The extensions that are not here will be downloaded in an arbitrary order after the list.
+    */
+    'load_order' => [
+        'Themer',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Extensions Paths
@@ -17,6 +39,7 @@ return [
     | Activator Class
     |--------------------------------------------------------------------------
     | The class responsible for managing the activation and deactivation of extensions.
+    | \Gigabait93\Extensions\Activators\DbActivator::class
     */
     'activator' => \Gigabait93\Extensions\Activators\FileActivator::class,
 
@@ -25,5 +48,5 @@ return [
     | JSON File for File Storage
     |--------------------------------------------------------------------------
     */
-    'json_file' => base_path('extensions.json'),
+    'json_file' => base_path('storage/extensions.json'),
 ];

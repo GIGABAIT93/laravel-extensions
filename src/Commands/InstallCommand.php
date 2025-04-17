@@ -4,6 +4,7 @@ namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
 use Gigabait93\Extensions\Services\Extensions;
+use Illuminate\Support\Facades\App;
 
 class InstallCommand extends Command
 {
@@ -13,7 +14,7 @@ class InstallCommand extends Command
     public function handle(): void
     {
         $extension = $this->argument('extension');
-        $manager = Extensions::getInstance();
+        $manager = App::make(Extensions::class);
         $result = $manager->install($extension);
         $this->info($result);
     }

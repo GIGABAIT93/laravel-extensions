@@ -3,6 +3,7 @@
 namespace Gigabait93\Extensions\Entities;
 
 use Gigabait93\Extensions\Services\Extensions;
+use Illuminate\Support\Facades\App;
 
 class Extension
 {
@@ -11,75 +12,70 @@ class Extension
     protected bool $active;
     protected array $meta;
 
+    /**
+     * @param array{name?: string, type?: string, active?: bool, ...} $data
+     */
     public function __construct(array $data)
     {
-        $this->name   = $data['name'] ?? '';
-        $this->type   = $data['type'] ?? '';
+        $this->name   = $data['name']   ?? '';
+        $this->type   = $data['type']   ?? '';
         $this->active = $data['active'] ?? false;
         $this->meta   = $data;
     }
 
-    /**
-     * Returns the extension name.
-     */
     public function getName(): string
     {
         return $this->name;
     }
 
-    /**
-     * Returns the extension type.
-     */
     public function getType(): string
     {
         return $this->type;
     }
 
     /**
-     * Checks if the extension is active.
+     * Checking on “Active”
      */
     public function isActive(): bool
     {
+        if ($this->isProtected()) {
+            return true;
+        }
         return $this->active;
     }
 
-    /**
-     * Returns the raw extension data.
-     */
+    /** Checking on “Protected” */
+    public function isProtected(): bool
+    {
+        return in_array($this->name, config('extensions.protected', []), true);
+    }
+
     public function getData(): array
     {
         return $this->meta;
     }
 
-    /**
-     * Installs the extension via the Extensions service.
-     */
     public function install(): string
     {
-        return Extensions::getInstance()->install($this->getName());
+        return App::make(Extensions::class)
+            ->install($this->name);
     }
 
-    /**
-     * Enables the extension via the Extensions service.
-     */
     public function enable(): string
     {
-        return Extensions::getInstance()->enable($this->getName());
+        return App::make(Extensions::class)
+            ->enable($this->name);
     }
 
-    /**
-     * Disables the extension via the Extensions service.
-     */
     public function disable(): string
     {
-        return Extensions::getInstance()->disable($this->getName());
+        return App::make(Extensions::class)
+            ->disable($this->name);
     }
 
-    /**
-     * Deletes the extension via the Extensions service.
-     */
     public function delete(): string
     {
-        return Extensions::getInstance()->delete($this->getName());
+        return App::make(Extensions::class)
+            ->delete($this->name);
     }
 }
