@@ -41,7 +41,6 @@ class MigrateCommand extends Command
             $migDir = $moduleDir . '/Database/migrations';
 
             if (!is_dir($migDir)) {
-                $this->info(" → In the extension '{$extension->getName()}' no migration.");
                 continue;
             }
 

@@ -82,12 +82,10 @@ class Extensions
         if (!$dir) {
             return "Extension '{$name}' not found.";
         }
-        if (is_dir($dir .'/Database/migrations')) {
-            Artisan::call('extension:migrate', [
-                'name' => $name,
-                '--force' => true,
-            ]);
-        }
+        Artisan::call('extension:migrate', [
+            'name' => $name,
+            '--force' => true,
+        ]);
 
         $this->invalidateCache();
         return "Extension '{$name}' has been successfully installed.";
