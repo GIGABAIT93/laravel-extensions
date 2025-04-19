@@ -56,6 +56,7 @@ class ExtensionsServiceProvider extends ServiceProvider
             \Gigabait93\Extensions\Commands\DisableCommand::class,
             \Gigabait93\Extensions\Commands\DeleteCommand::class,
             \Gigabait93\Extensions\Commands\DiscoverCommand::class,
+            \Gigabait93\Extensions\Commands\MigrateCommand::class,
         ]);
 
         // Schedule Detection of New Expansions

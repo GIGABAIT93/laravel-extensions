@@ -5,6 +5,7 @@ namespace Gigabait93\Extensions\Services;
 use Gigabait93\Extensions\Contracts\ActivatorInterface;
 use Gigabait93\Extensions\Entities\Extension;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 
 class Extensions
@@ -17,14 +18,16 @@ class Extensions
 
     /**
      * @param ActivatorInterface $activator
-     * @param string[]           $extensionsPaths
+     * @param string[] $extensionsPaths
      */
     public function __construct(
         protected ActivatorInterface $activator,
-        array $extensionsPaths
-    ) {
+        array                        $extensionsPaths
+    )
+    {
         $this->extensionsPaths = $extensionsPaths;
     }
+
     /**
      * Clear the cache of Extension objects.
      * This is called when the status of an extension changes.
@@ -53,15 +56,15 @@ class Extensions
 
         $items = [];
         foreach ($this->extensionsPaths as $path) {
-            if (! is_dir($path)) continue;
+            if (!is_dir($path)) continue;
 
             foreach (glob($path . '/*/extension.json') ?: [] as $file) {
                 $data = json_decode(File::get($file), true);
-                if (! is_array($data)) continue;
+                if (!is_array($data)) continue;
 
                 $name = basename(dirname($file));
                 $items[$name] = array_merge($data, [
-                    'name'   => $name,
+                    'name' => $name,
                     'active' => $statuses[$name] ?? false,
                 ]);
             }
@@ -75,9 +78,17 @@ class Extensions
 
     public function install(string $name): string
     {
-        if (! $this->getDirectory($name)) {
+        $dir = $this->getDirectory($name);
+        if (!$dir) {
             return "Extension '{$name}' not found.";
         }
+        if (is_dir($dir .'/Database/migrations')) {
+            Artisan::call('extension:migrate', [
+                'name' => $name,
+                '--force' => true,
+            ]);
+        }
+
         $this->invalidateCache();
         return "Extension '{$name}' has been successfully installed.";
     }
@@ -135,7 +146,7 @@ class Extensions
     {
         $found = [];
         foreach ($this->extensionsPaths as $path) {
-            if (! is_dir($path)) continue;
+            if (!is_dir($path)) continue;
             foreach (glob($path . '/*/extension.json') ?: [] as $file) {
                 $found[] = basename(dirname($file));
             }
