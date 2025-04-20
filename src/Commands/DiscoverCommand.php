@@ -3,23 +3,21 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
-use Gigabait93\Extensions\Services\Extensions;
-use Illuminate\Support\Facades\App;
+use Gigabait93\Extensions\Facades\Extensions;
 
 class DiscoverCommand extends Command
 {
-    protected $signature = 'extension:discover';
+    protected $signature   = 'extension:discover';
     protected $description = 'Scan extensions catalog and synchronize them with repository';
 
     public function handle(): void
     {
-        $manager = App::make(Extensions::class);
-        $data = $manager->discover();
+        $names = Extensions::discover();
 
-        if (empty($data)) {
-            $this->info('There are no new synchronization extensions.');
+        if (empty($names)) {
+            $this->info('No new extensions found.');
         } else {
-            $this->info('The following extensions have been synchronized: ' . implode(', ', $data));
+            $this->info('Synchronized extensions: ' . implode(', ', $names));
         }
     }
 }

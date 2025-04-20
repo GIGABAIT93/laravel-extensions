@@ -1,0 +1,13 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Facades;
+
+use Illuminate\Support\Facades\Facade;
+
+class {{name}} extends Facade
+{
+    protected static function getFacadeAccessor(): string
+    {
+        return '{{camelLower}}';
+    }
+}

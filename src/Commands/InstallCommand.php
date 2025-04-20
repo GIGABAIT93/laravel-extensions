@@ -3,19 +3,19 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
-use Gigabait93\Extensions\Services\Extensions;
-use Illuminate\Support\Facades\App;
+use Gigabait93\Extensions\Facades\Extensions;
 
 class InstallCommand extends Command
 {
-    protected $signature = 'extension:install {extension}';
-    protected $description = 'Set up a new extension';
+    protected $signature   = 'extension:install {extension} {--force}';
+    protected $description = 'Set up a new extension (migrate + seed)';
 
     public function handle(): void
     {
-        $extension = $this->argument('extension');
-        $manager = App::make(Extensions::class);
-        $result = $manager->install($extension);
+        $name  = $this->argument('extension');
+        $force = $this->option('force');
+
+        $result = Extensions::install($name, $force);
         $this->info($result);
     }
 }

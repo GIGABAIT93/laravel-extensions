@@ -1,10 +1,12 @@
 ### Laravel Extensions
 
-This package provides a framework for managing extensions in a Laravel application. It includes services, commands, and activators to handle extensions effectively.
+This package provides a framework for managing extensions in a Laravel application. It includes services, commands, and
+activators to handle extensions effectively.
 
 ---
 
 ### Installation
+
 1. Add to your file `composer.json`:
    ```json
    "repositories": [
@@ -41,14 +43,15 @@ This package provides a framework for managing extensions in a Laravel applicati
 
 ### Commands
 
-| Command                  | Description                                                   |
-|--------------------------|---------------------------------------------------------------|
-| `extension:list`         | Outputs a list of all installed extensions with their statuses and types. |
-| `extension:enable {extension}` | Enables a specific extension.                                   |
-| `extension:disable {extension}` | Disables a specific extension.                                  |
-| `extension:delete {extension}`  | Deletes a specific extension.                                   |
-| `extension:discover`     | Scans the extensions directory and synchronizes new extensions. |
-| `extension:install {extension}`  | Installs a specific extension.                                   |
+| Command                         | Description                                                               |
+|---------------------------------|---------------------------------------------------------------------------|
+| `extension:list`                | Outputs a list of all installed extensions with their statuses and types. |
+| `extension:enable {extension}`  | Enables a specific extension.                                             |
+| `extension:disable {extension}` | Disables a specific extension.                                            |
+| `extension:delete {extension}`  | Deletes a specific extension.                                             |
+| `extension:discover`            | Scans the extensions directory and synchronizes new extensions.           |
+| `extension:install {extension}` | Installs a specific extension.                                            |
+| `extension:make {extension}`    | Make new extension.                                                       |
 
 ---
 
@@ -63,51 +66,13 @@ The package uses a configuration file (`config/extensions.php`) to define settin
 
 ---
 
-### Example Code
-
-#### Programmatically Managing Extensions
-You can use the `Extensions` service to manage extensions in your application:
-
-```php
-use Gigabait93\Extensions\Services\Extensions;
-
-$extensions = app(Extensions::class);
-
-// List all extensions
-$allExtensions = $extensions->all();
-
-// Enable an extension
-$extensions->enable('ExamplePlugin');
-
-// Disable an extension
-$extensions->disable('ExamplePlugin');
-
-// Delete an extension
-$extensions->delete('ExamplePlugin');
-
-// Discover new extensions
-$extensions->discover();
-
-// Get a specific extension
-$themer = app(Extensions::class)->get('Themer');
-
-// Use the extension
-$themer->getName();
-$themer->getType();
-$themer->isActive();
-$themer->getData();
-$themer->enable();
-$themer->disable();
-$themer->install();
-$themer->delete();
-```
-
 ### How to Create an Extension
+
 1. Create a new directory for your extension in the `modules` folder or any other specified directory.
-   - Example: `modules/ExamplePlugin`
+    - Example: `modules/ExamplePlugin`
 2. Create a service provider for your extension.
 3. Create extension.json file in the root of your extension directory.
-   - Example: `modules/ExamplePlugin/extension.json`
+    - Example: `modules/ExamplePlugin/extension.json`
     ```json
    {
       "name": "Themer",
@@ -116,7 +81,7 @@ $themer->delete();
    }
     ```
 4. Create a service provider class for your extension.
-   - Example: `modules/ExamplePlugin/Providers/ThemeServiceProvider.php`
+    - Example: `modules/ExamplePlugin/Providers/ThemeServiceProvider.php`
     ```php
    namespace Modules\Themer\Providers;
 
@@ -135,7 +100,6 @@ $themer->delete();
        }
    }
     ```
-   
 
 ---
 

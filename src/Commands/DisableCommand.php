@@ -3,19 +3,17 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
-use Gigabait93\Extensions\Services\Extensions;
-use Illuminate\Support\Facades\App;
+use Gigabait93\Extensions\Facades\Extensions;
 
 class DisableCommand extends Command
 {
-    protected $signature = 'extension:disable {extension}';
+    protected $signature   = 'extension:disable {extension}';
     protected $description = 'Disable the extension';
 
     public function handle(): void
     {
-        $extension = $this->argument('extension');
-        $manager = App::make(Extensions::class);
-        $result = $manager->disable($extension);
+        $name   = $this->argument('extension');
+        $result = Extensions::disable($name);
         $this->info($result);
     }
 }

@@ -1,0 +1,13 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Database\Seeders;
+
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // TODO: seed default data for {{name}}
+    }
+}

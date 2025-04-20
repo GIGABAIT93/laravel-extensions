@@ -30,7 +30,7 @@ return [
     | Specify one or more directories where your extensions are located.
     | For example: [base_path('Extensions'), resource_path('extensions')]
     */
-    'extensions_paths' => [
+    'paths' => [
         base_path('modules'),
     ],
 

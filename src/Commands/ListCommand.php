@@ -3,35 +3,23 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Illuminate\Console\Command;
-use Gigabait93\Extensions\Services\Extensions;
-use Illuminate\Support\Facades\App;
+use Gigabait93\Extensions\Facades\Extensions;
 
 class ListCommand extends Command
 {
-    protected $signature = 'extension:list';
+    protected $signature   = 'extension:list';
     protected $description = 'Outputs a list of all extensions';
 
     public function handle(): void
     {
-        $manager = App::make(Extensions::class);
-        $extensions = $manager->all();
-
-        if ($extensions->isEmpty()) {
-            $this->info('There are no extensions installed.');
-            return;
-        }
-
-        $data = $extensions->map(function ($item) {
-            $name = $item->getName() ?? $item['name'];
-            $active = ($item->isActive() ?? $item['active']) ? 'active' : 'inactive';
-            $type = $item->getType() ?? ($item['type'] ?? '');
+        $rows = Extensions::all()->map(function ($ext) {
             return [
-                'Name'   => $name,
-                'Status' => $active,
-                'Type'   => $type,
+                'Name'   => $ext->getName(),
+                'Status' => $ext->isActive() ? 'active' : 'inactive',
+                'Type'   => $ext->getType(),
             ];
         })->toArray();
 
-        $this->table(['Name', 'Status', 'Type'], $data);
+        $this->table(['Name', 'Status', 'Type'], $rows);
     }
 }

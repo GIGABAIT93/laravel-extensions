@@ -1,0 +1,5 @@
+{
+  "name": "{{name}}",
+  "provider": "{{namespace}}\\{{name}}\\Providers\\{{name}}ServiceProvider",
+  "type": "module"
+}

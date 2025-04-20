@@ -1,0 +1,8 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Services;
+
+class {{name}}Service
+{
+    // TODO: add your service methods here
+}

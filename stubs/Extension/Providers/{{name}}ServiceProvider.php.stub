@@ -1,0 +1,24 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Providers;
+
+use Illuminate\Support\ServiceProvider;
+
+class {{name}}ServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        // merge config and bind services
+        // $this->mergeConfigFrom(__DIR__ . '/../Config/{{snake}}.php', '{{snake}}');
+    }
+
+    public function boot(): void
+    {
+        // load migrations
+        // $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+        // load seeders
+        // $this->publishes([__DIR__ . '/../Database/Seeders' => database_path('seeders/modules/{{snake}}')], '{{snake}}');
+        // $this->loadViewsFrom(__DIR__ . '/../Resources', '{{snake}}');
+        // $this->loadTranslationsFrom(__DIR__ . '/../Lang', '{{snake}}');
+    }
+}
