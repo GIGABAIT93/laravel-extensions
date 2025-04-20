@@ -34,7 +34,6 @@ class MakeModuleCommand extends Command
             return;
         }
 
-        // 1) Вибір базового шляху (аргумент або інтерактивно)
         $paths = array_values($this->bases);
         $inputPath = $this->argument('path');
 
@@ -44,7 +43,6 @@ class MakeModuleCommand extends Command
             $basePath = $this->choice('Select base path for the module', $paths);
         }
 
-        // 2) Знайти namespace за шляхом
         $namespace = ucfirst(basename($basePath));
 
         if ($namespace === false) {
@@ -59,7 +57,6 @@ class MakeModuleCommand extends Command
             return;
         }
 
-        // 3) Скафолдим усі стаби, підставляючи плейсхолдери
         $this->copyStubs($name, $namespace, $destination);
 
         $this->info("Module {$name} created in namespace {$namespace} at {$destination}");
@@ -75,7 +72,6 @@ class MakeModuleCommand extends Command
             $stubPath = $file->getPathname();
             $rel = Str::after($stubPath, $this->stubRoot . DIRECTORY_SEPARATOR);
 
-            // 4) Генеруємо фактичний шлях
             if (preg_match('#^Database/Migrations/migration_create_.*\.stub$#', $rel)) {
                 $timestamp = now()->format('Y_m_d_His');
                 $rel = "Database/Migrations/{$timestamp}_create_{$snakePlural}_table.php";
@@ -90,7 +86,6 @@ class MakeModuleCommand extends Command
             $target = $dest . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
             $this->files->ensureDirectoryExists(dirname($target));
 
-            // 5) Замінюємо плейсхолдери у вмісті
             $stub = $this->files->get($stubPath);
             $content = str_replace(
                 ['{{namespace}}', '{{name}}', '{{snake}}', '{{snakePlural}}', '{{camelLower}}'],
