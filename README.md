@@ -51,7 +51,7 @@ activators to handle extensions effectively.
 | `extension:delete {extension}`  | Deletes a specific extension.                                             |
 | `extension:discover`            | Scans the extensions directory and synchronizes new extensions.           |
 | `extension:install {extension}` | Installs a specific extension.                                            |
-| `extension:make {extension}`    | Make new extension.                                                       |
+| `extension:meke {extension}`    | Interactive creation of a new extension (type based on path). |
 
 ---
 
