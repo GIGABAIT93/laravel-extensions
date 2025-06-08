@@ -243,9 +243,6 @@ class ExtensionsService
      */
     public function enable(string $name): string
     {
-        if ($this->isProtected($name)) {
-            return "Extension '{$name}' is protected.";
-        }
         $ok = $this->activator->setStatus($name, true);
         $this->invalidateCache();
         return $ok ? "Extension enabled." : "Enable failed.";
