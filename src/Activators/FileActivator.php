@@ -29,6 +29,7 @@ class FileActivator implements ActivatorInterface
     {
         $statuses = $this->getStatuses();
         $statuses[$extension] = $status;
+        File::ensureDirectoryExists(dirname($this->jsonFile));
         return File::put($this->jsonFile, json_encode($statuses, JSON_PRETTY_PRINT)) !== false;
     }
 }
