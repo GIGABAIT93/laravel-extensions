@@ -8,15 +8,15 @@ class {{name}}ServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../Config/{{snake}}.php', '{{snake}}');
+        $this->mergeConfigFrom(__DIR__ . '/../Config/config.php', '{{snake}}');
     }
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
-        $this->publishes([
-            __DIR__ . '/../Config/{{snake}}.php' => config_path('{{snake}}.php'),
-        ], '{{snake}}-config');
+        // $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+        // $this->publishes([
+        //     __DIR__ . '/../Config/config.php' => config_path('{{snake}}.php'),
+        // ], '{{snake}}');
         $this->loadViewsFrom(__DIR__ . '/../Resources', '{{snake}}');
         $this->loadTranslationsFrom(__DIR__ . '/../Lang', '{{snake}}');
     }
