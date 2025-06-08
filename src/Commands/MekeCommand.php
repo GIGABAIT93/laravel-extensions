@@ -6,12 +6,12 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
-class MakeModuleCommand extends Command
+class MekeCommand extends Command
 {
-    protected $signature = 'extension:make
-                                {name     : Module name in StudlyCase}
-                                {path?    : Base path (choose from config extensions.paths)}';
-    protected $description = 'Scaffold a new extension from stub files';
+    protected $signature = 'extension:meke
+                            {name? : Extension name in StudlyCase}
+                            {path? : Base path (choose from config extensions.paths)}';
+    protected $description = 'Interactively scaffold a new extension from stub files';
 
     protected Filesystem $files;
     protected string $stubRoot;
@@ -27,12 +27,16 @@ class MakeModuleCommand extends Command
 
     public function handle(): void
     {
-        $name = Str::studly($this->argument('name'));
-
         if (empty($this->bases)) {
             $this->error("Please configure at least one entry in config('extensions.paths')");
             return;
         }
+
+        $name = $this->argument('name');
+        if (! $name) {
+            $name = $this->ask('Enter extension name');
+        }
+        $name = Str::studly($name);
 
         $paths = array_values($this->bases);
         $inputPath = $this->argument('path');
@@ -40,7 +44,7 @@ class MakeModuleCommand extends Command
         if ($inputPath && in_array($inputPath, $paths, true)) {
             $basePath = $inputPath;
         } else {
-            $basePath = $this->choice('Select base path for the module', $paths);
+            $basePath = $this->choice('Select base path for the extension', $paths);
         }
 
         $namespace = ucfirst(basename($basePath));
@@ -50,19 +54,21 @@ class MakeModuleCommand extends Command
             return;
         }
 
+        $type = basename($basePath);
+
         $destination = rtrim($basePath, '/\\') . DIRECTORY_SEPARATOR . $name;
 
         if ($this->files->exists($destination)) {
-            $this->error("Module {$name} already exists at {$destination}");
+            $this->error("Extension {$name} already exists at {$destination}");
             return;
         }
 
-        $this->copyStubs($name, $namespace, $destination);
+        $this->copyStubs($name, $namespace, $destination, $type);
 
-        $this->info("Module {$name} created in namespace {$namespace} at {$destination}");
+        $this->info("Extension {$name} created in namespace {$namespace} at {$destination}");
     }
 
-    protected function copyStubs(string $name, string $namespace, string $dest): void
+    protected function copyStubs(string $name, string $namespace, string $dest, string $type): void
     {
         $snake = Str::snake($name);
         $snakePlural = Str::plural($snake);
@@ -72,7 +78,7 @@ class MakeModuleCommand extends Command
             $stubPath = $file->getPathname();
             $rel = Str::after($stubPath, $this->stubRoot . DIRECTORY_SEPARATOR);
 
-            if (preg_match('#^Database/Migrations/migration_create_.*\.stub$#', $rel)) {
+            if (preg_match('#^Database/Migrations/migration_create_.*\\.stub$#', $rel)) {
                 $timestamp = now()->format('Y_m_d_His');
                 $rel = "Database/Migrations/{$timestamp}_create_{$snakePlural}_table.php";
             } else {
@@ -88,8 +94,8 @@ class MakeModuleCommand extends Command
 
             $stub = $this->files->get($stubPath);
             $content = str_replace(
-                ['{{namespace}}', '{{name}}', '{{snake}}', '{{snakePlural}}', '{{camelLower}}'],
-                [$namespace, $name, $snake, $snakePlural, $camelLower],
+                ['{{namespace}}', '{{name}}', '{{snake}}', '{{snakePlural}}', '{{camelLower}}', '{{type}}'],
+                [$namespace, $name, $snake, $snakePlural, $camelLower, $type],
                 $stub
             );
 
