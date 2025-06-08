@@ -6,9 +6,9 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
-class MekeCommand extends Command
+class MakeCommand extends Command
 {
-    protected $signature = 'extension:meke
+    protected $signature = 'extension:make
                             {name? : Extension name in StudlyCase}
                             {path? : Base path (choose from config extensions.paths)}';
     protected $description = 'Interactively scaffold a new extension from stub files';

@@ -80,7 +80,7 @@ class ExtensionsServiceProvider extends ServiceProvider
             \Gigabait93\Extensions\Commands\DeleteCommand::class,
             \Gigabait93\Extensions\Commands\MigrateCommand::class,
             \Gigabait93\Extensions\Commands\DiscoverCommand::class,
-            \Gigabait93\Extensions\Commands\MekeCommand::class,
+            \Gigabait93\Extensions\Commands\MakeCommand::class,
         ]);
     }
 }
