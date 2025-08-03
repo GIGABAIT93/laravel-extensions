@@ -24,6 +24,18 @@ return [
     ],
 
     /*
+    |----------------------------------------------------------------------
+    | Switchable Types
+    |----------------------------------------------------------------------
+    | List extension types where only one extension of a given type can be
+    | active at a time. Enabling an extension of one of these types will
+    | automatically disable the others of the same type.
+    */
+    'switch_types' => [
+        // 'theme',
+    ],
+
+    /*
     |--------------------------------------------------------------------------
     | Extensions Paths
     |--------------------------------------------------------------------------

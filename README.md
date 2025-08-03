@@ -63,6 +63,8 @@ The package uses a configuration file (`config/extensions.php`) to define settin
 - **Extensions Paths**: Directories where extensions are stored.
 - **Protected Extensions**: Extensions that cannot be disabled or deleted.
 - **Load Order**: Specify the order in which extensions are loaded.
+- **Switchable Types**: Types where only one extension of the type can be active;
+  enabling one will automatically disable the others.
 
 ---
 
