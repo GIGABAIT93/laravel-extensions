@@ -14,11 +14,11 @@ use Illuminate\Support\Facades\Facade;
  * @method static Extension|null                    get(string $name)                               Get a single extension by name
  * @method static Collection<string, Extension>     active()                                        Get only active extensions
  * @method static Extension|null                    getByName(string $name)                         Alias for get()
- * @method static Extension|null                    getByType(string $type)                         Find by declared type
- * @method static Extension|null                    getByPath(string $path)                         Find by filesystem path
- * @method static Extension|null                    getByNamespace(string $namespace)               Find by base namespace
- * @method static Extension|null                    getByClass(string $class)                       Find by main class (placeholder)
- * @method static Extension|null                    getByTypeAndName(string $type, string $name)    Find by both type and name
+ * @method static Collection<string, Extension>     getByType(string $type)                         Find by declared type
+ * @method static Collection<string, Extension>     getByPath(string $path)                         Find by filesystem path
+ * @method static Collection<string, Extension>     getByNamespace(string $namespace)               Find by base namespace
+ * @method static Collection<string, Extension>     getByClass(string $class)                       Find by main class (placeholder)
+ * @method static Collection<string, Extension>     getByTypeAndName(string $type, string $name)    Find by both type and name
  * @method static string                            install(string $name, bool $force = false)      Run migrations & seeders
  * @method static string                            enable(string $name)                            Enable an extension
  * @method static string                            disable(string $name)                           Disable an extension
