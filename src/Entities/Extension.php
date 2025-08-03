@@ -47,7 +47,7 @@ class Extension
 
     public function isActive(): bool
     {
-        return $this->active || $this->isProtected();
+        return $this->active;
     }
 
     public function isProtected(): bool
