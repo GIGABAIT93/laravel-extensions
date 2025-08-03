@@ -9,6 +9,7 @@ class Extension
 {
     protected string     $name;
     protected string     $type;
+    protected string     $version;
     protected bool       $active;
     protected string     $path;
     protected ?string    $migrationPath;
@@ -21,6 +22,7 @@ class Extension
         $this->service       = $service;
         $this->name          = $data['name'];
         $this->type          = $data['type']          ?? '';
+        $this->version       = $data['version']       ?? '1.0.0';
         $this->active        = $data['active'];
         $this->path          = $data['path'];
         $this->migrationPath = $data['migrationPath'] ?? null;
