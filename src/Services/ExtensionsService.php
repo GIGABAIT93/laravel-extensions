@@ -231,6 +231,7 @@ class ExtensionsService
             }
         }
 
+        $this->callExtensionEvent($ext, 'onInstall');
         $this->invalidateCache();
         return "Extension '{$name}' installed.";
     }
@@ -263,6 +264,9 @@ class ExtensionsService
 
         $ok = $this->activator->setStatus($name, true);
         $this->invalidateCache();
+        if ($ok && $ext) {
+            $this->callExtensionEvent($ext, 'onEnable');
+        }
         return $ok ? "Extension enabled." : "Enable failed.";
     }
 
@@ -277,8 +281,12 @@ class ExtensionsService
         if ($this->isProtected($name)) {
             return "Extension '{$name}' is protected.";
         }
-        $ok = $this->activator->setStatus($name, false);
+        $ext = $this->get($name);
+        $ok  = $this->activator->setStatus($name, false);
         $this->invalidateCache();
+        if ($ok && $ext) {
+            $this->callExtensionEvent($ext, 'onDisable');
+        }
         return $ok ? "Extension disabled." : "Disable failed.";
     }
 
@@ -294,10 +302,14 @@ class ExtensionsService
             return "Extension '{$name}' is protected.";
         }
 
+        $ext     = $this->get($name);
         $deleted = false;
         foreach ($this->paths as $base) {
             $dir = rtrim($base, '/\\') . DIRECTORY_SEPARATOR . $name;
             if ($this->fs->isDirectory($dir)) {
+                if ($ext) {
+                    $this->callExtensionEvent($ext, 'onDelete');
+                }
                 $this->fs->deleteDirectory($dir);
                 $deleted = true;
             }
@@ -327,6 +339,26 @@ class ExtensionsService
     public function hasSeeders(string $name): bool
     {
         return (bool) $this->get($name)?->getSeederPath();
+    }
+
+    /**
+     * Call lifecycle event on the extension class if it exists.
+     *
+     * @param  Extension $ext
+     * @param  string    $event
+     * @return void
+     */
+    protected function callExtensionEvent(Extension $ext, string $event): void
+    {
+        $ns = $ext->getNamespace();
+        if (! $ns) {
+            return;
+        }
+
+        $class = $ns . '\\Extension';
+        if (class_exists($class) && method_exists($class, $event)) {
+            $class::$event();
+        }
     }
 
     /**

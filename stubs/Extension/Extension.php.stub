@@ -1,0 +1,26 @@
+<?php
+
+namespace {{namespace}}\{{name}};
+
+class Extension
+{
+    public static function onInstall(): void
+    {
+        // Called after the extension is installed
+    }
+
+    public static function onEnable(): void
+    {
+        // Called after the extension is enabled
+    }
+
+    public static function onDisable(): void
+    {
+        // Called after the extension is disabled
+    }
+
+    public static function onDelete(): void
+    {
+        // Called before the extension is deleted
+    }
+}
