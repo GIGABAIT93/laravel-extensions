@@ -139,7 +139,7 @@ trait ManagesExtensions
             return;
         }
 
-        $class = $ns . '\\Extension';
+        $class = $ns . '\\Events\\Extension';
         if (class_exists($class) && method_exists($class, $event)) {
             $class::$event();
         }
