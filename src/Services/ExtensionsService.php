@@ -243,6 +243,24 @@ class ExtensionsService
      */
     public function enable(string $name): string
     {
+        $ext = $this->get($name);
+
+        if ($ext) {
+            $type        = $ext->getType();
+            $switchTypes = config('extensions.switch_types', []);
+
+            if ($type && in_array($type, $switchTypes, true)) {
+                foreach ($this->all() as $other) {
+                    if ($other->getName() === $name) {
+                        continue;
+                    }
+                    if ($other->getType() === $type && ! $other->isProtected()) {
+                        $this->activator->setStatus($other->getName(), false);
+                    }
+                }
+            }
+        }
+
         $ok = $this->activator->setStatus($name, true);
         $this->invalidateCache();
         return $ok ? "Extension enabled." : "Enable failed.";
