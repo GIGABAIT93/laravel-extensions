@@ -32,6 +32,25 @@ trait ExtensionHelpers
     }
 
     /**
+     * Determine if an extension can be disabled.
+     *
+     * Protected extensions can only be disabled when their type is listed
+     * in the "switch_types" configuration.
+     */
+    protected function canDisable(string $name): bool
+    {
+        if (! $this->isProtected($name)) {
+            return true;
+        }
+
+        $ext        = $this->get($name);
+        $switch     = config('extensions.switch_types', []);
+        $type       = $ext?->getType();
+
+        return $type && in_array($type, $switch, true);
+    }
+
+    /**
      * Clear the internal cache so next call to all() rescans statuses.
      */
     protected function invalidateCache(): void

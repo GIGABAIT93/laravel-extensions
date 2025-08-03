@@ -20,10 +20,8 @@ trait QueriesExtensions
         }
 
         $statuses = $this->activator->getStatuses();
-
-        // ensure protected extensions are always active
         foreach (config('extensions.protected', []) as $name) {
-            $statuses[$name] = true;
+            $statuses[$name] = $statuses[$name] ?? true;
         }
 
         $items = [];
@@ -36,13 +34,20 @@ trait QueriesExtensions
             $metaFile = "$dir/extension.json";
             $meta     = json_decode($this->fs->get($metaFile), true) ?: [];
 
+            $type    = $meta['type'] ?? '';
             $migDir  = "$dir/Database/Migrations";
             $seedDir = "$dir/Database/Seeders";
 
+            $active = (bool) $isActive;
+            if (in_array($name, config('extensions.protected', []), true)
+                && ! ($type && in_array($type, config('extensions.switch_types', []), true))) {
+                $active = true;
+            }
+
             $items[$name] = array_merge($meta, [
                 'name'          => $name,
-                'type'          => $meta['type'] ?? '',
-                'active'        => (bool) $isActive,
+                'type'          => $type,
+                'active'        => $active,
                 'path'          => $dir,
                 'migrationPath' => $this->fs->isDirectory($migDir)  && $this->hasPhp($migDir)  ? $migDir  : null,
                 'seederPath'    => $this->fs->isDirectory($seedDir) && $this->hasPhp($seedDir) ? $seedDir : null,

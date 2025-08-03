@@ -55,7 +55,7 @@ trait ManagesExtensions
                     if ($other->getName() === $name) {
                         continue;
                     }
-                    if ($other->getType() === $type && ! $other->isProtected()) {
+                    if ($other->getType() === $type && $this->canDisable($other->getName())) {
                         $this->activator->setStatus($other->getName(), false);
                     }
                 }
@@ -75,7 +75,7 @@ trait ManagesExtensions
      */
     public function disable(string $name): string
     {
-        if ($this->isProtected($name)) {
+        if (! $this->canDisable($name)) {
             return "Extension '{$name}' is protected.";
         }
         $ext = $this->get($name);
