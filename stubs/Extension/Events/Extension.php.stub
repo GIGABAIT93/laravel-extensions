@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\Events\{{name}};
+namespace {{namespace}}\{{name}}\Events;
 
 class Extension
 {
