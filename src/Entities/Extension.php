@@ -40,6 +40,11 @@ class Extension
         return $this->type;
     }
 
+    public function getVersion(): string
+    {
+        return $this->version;
+    }
+
     public function isActive(): bool
     {
         return $this->active || $this->isProtected();
@@ -65,8 +70,11 @@ class Extension
         return $this->seederPath;
     }
 
-    public function getMeta(): array
+    public function getMeta(?string $key = '', ?string $default = ''): array|string
     {
+        if ($key) {
+            return $this->meta[$key] ?? $default;
+        }
         return $this->meta;
     }
 
