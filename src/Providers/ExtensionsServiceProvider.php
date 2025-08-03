@@ -56,7 +56,11 @@ class ExtensionsServiceProvider extends ServiceProvider
         });
 
         // Registration of providers in order
-        $sorted->each(fn(Extension $e) => $this->registerExtensionProvider($e));
+        $sorted->each(function (Extension $e) {
+            $this->registerExtensionHelpers($e);
+            $this->registerExtensionProvider($e);
+        });
+
     }
 
     /**
@@ -82,5 +86,13 @@ class ExtensionsServiceProvider extends ServiceProvider
             \Gigabait93\Extensions\Commands\DiscoverCommand::class,
             \Gigabait93\Extensions\Commands\MakeCommand::class,
         ]);
+    }
+
+    protected function registerExtensionHelpers(Extension $e): void
+    {
+        $helpers = $e->getPath() . '/helpers.php';
+        if (file_exists($helpers)) {
+            require_once $helpers;
+        }
     }
 }
