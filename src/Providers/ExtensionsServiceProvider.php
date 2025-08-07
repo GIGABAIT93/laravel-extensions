@@ -3,10 +3,15 @@
 namespace Gigabait93\Extensions\Providers;
 
 use Gigabait93\Extensions\Contracts\ActivatorInterface;
+use Gigabait93\Extensions\Facades\Extensions;
 use Gigabait93\Extensions\Services\ExtensionBuilder;
 use Gigabait93\Extensions\Services\ExtensionsService;
 use Gigabait93\Extensions\Entities\Extension;
+use Illuminate\Console\Events\CommandFinished;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 
@@ -70,6 +75,18 @@ class ExtensionsServiceProvider extends ServiceProvider
         $sorted->each(function (Extension $e) {
             $this->registerExtensionHelpers($e);
             $this->registerExtensionProvider($e);
+        });
+
+        Event::listen(CommandFinished::class, function (CommandFinished $event) {
+            static $ran = false;
+            if ($ran || $event->input->getFirstArgument() !== 'migrate') return;
+            $ran = true;
+            $extensions = Extensions::all()->filter(fn(Extension $e) => $e->isProtected());
+            foreach ($extensions as $extension) {
+                $extension->install();
+                $extension->enable();
+                \Log::info("Protected extension '{$extension->getName()}' installed and enabled.");
+            }
         });
 
     }
