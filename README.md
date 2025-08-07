@@ -2,6 +2,8 @@
 
 This package provides a framework for managing extensions in a Laravel application. It includes services, commands, and
 activators to handle extensions effectively.
+Full documentation: [English](docs/en/introduction.md) | [Українська](docs/uk/introduction.md)
+
 
 ---
 
