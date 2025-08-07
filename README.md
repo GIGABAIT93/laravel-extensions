@@ -19,7 +19,7 @@ Full documentation: [English](docs/en/introduction.md) | [Українська](
     ],
     "autoload": {
         "psr-4": {
-            "Modules\\": "modules/", // extensions path and namespace
+            "Modules\\": "modules/",
         }
     },
    ```
