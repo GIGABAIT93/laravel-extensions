@@ -2,3 +2,11 @@ docs/ export-ignore
 build/ export-ignore
 .idea/ export-ignore
 vendor/ export-ignore
+.gitignore export-ignore
+README.md export-ignore
+LICENSE export-ignore
+.gitattributes export-ignore
+.gitmodules export-ignore
+.github/ export-ignore
+.git/ export-ignore
+.vscode/ export-ignore
