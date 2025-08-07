@@ -6,6 +6,7 @@ return [
     'enter_extension_name' => 'Enter extension name',
     'base_path_required' => 'Base path is required',
     'select_base_path' => 'Select base path for the extension',
+    'stubs_path_required' => 'Stubs path is required',
     'select_stubs' => 'Select stubs to generate',
     'extension_created' => 'Extension :name created in namespace :namespace at :destination',
     'no_extensions_found_in_path' => 'No extensions found in selected path',
