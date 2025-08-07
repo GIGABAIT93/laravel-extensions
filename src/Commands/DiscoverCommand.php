@@ -2,12 +2,12 @@
 
 namespace Gigabait93\Extensions\Commands;
 
-use Illuminate\Console\Command;
 use Gigabait93\Extensions\Facades\Extensions;
+use Illuminate\Console\Command;
 
 class DiscoverCommand extends Command
 {
-    protected $signature   = 'extension:discover';
+    protected $signature = 'extension:discover';
     protected $description = 'Scan extensions catalog and synchronize them with repository';
 
     public function handle(): void
