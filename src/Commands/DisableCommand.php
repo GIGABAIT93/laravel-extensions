@@ -2,25 +2,22 @@
 
 namespace Gigabait93\Extensions\Commands;
 
-use Illuminate\Console\Command;
 use Gigabait93\Extensions\Facades\Extensions;
+use Gigabait93\Extensions\Commands\Concerns\InteractsWithExtensions;
+use function Laravel\Prompts\select;
 
-class DisableCommand extends Command
+class DisableCommand extends AbstractCommand
 {
+    use InteractsWithExtensions;
+
     protected $signature   = 'extension:disable {extension?}';
     protected $description = 'Disable the extension';
 
     public function handle(): void
     {
-        $name   = $this->argument('extension');
+        $name = $this->promptExtension('extensions::commands.select_extension_disable');
         if (! $name) {
-            $list = Extensions::all()->map(fn($e) => $e->getName())->toArray();
-            if ($this->input->isInteractive()) {
-                $name = $this->choice(trans('extensions::commands.select_extension_disable'), $list);
-            } else {
-                $this->error(trans('extensions::commands.extension_name_required'));
-                return;
-            }
+            return;
         }
         $result = Extensions::disable($name);
         $this->info($result);
