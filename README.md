@@ -121,6 +121,31 @@ The package uses a configuration file (`config/extensions.php`) to define settin
 
 ---
 
+### Extension Builder
+
+Extensions can also be scaffolded programmatically, which is useful for
+integration into a web interface. Use the `ExtensionBuilder` facade:
+
+```php
+use Gigabait93\Extensions\Facades\ExtensionBuilder;
+
+// Inspect available paths and stub groups
+$paths = ExtensionBuilder::paths();
+$groups = ExtensionBuilder::stubGroups();
+
+// Fluent configuration
+ExtensionBuilder::name('Blog')
+    ->in($paths[0])
+    ->addStub('migrations')
+    ->build();
+```
+
+By default, the extension is created in the first path defined in
+`extensions.paths`, using the configured stub groups. You may override the base
+path, stub groups or stub root as needed for full control.
+
+---
+
 ### Requirements
 
 - PHP 8.3+

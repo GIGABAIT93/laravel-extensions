@@ -94,3 +94,26 @@ class ThemeServiceProvider extends ServiceProvider
 ```
 
 Після створення файлів виконайте `php artisan extension:discover`, щоб зареєструвати нове розширення.
+
+## Програмний білдер
+
+Розширення можна створювати програмно для використання у веб-інтерфейсі.
+Використовуйте фасад `ExtensionBuilder`:
+
+```php
+use Gigabait93\Extensions\Facades\ExtensionBuilder;
+
+// Доступні шляхи та групи шаблонів
+$paths = ExtensionBuilder::paths();
+$groups = ExtensionBuilder::stubGroups();
+
+ExtensionBuilder::name('Blog')
+    ->in($paths[0])
+    ->stubs($groups)
+    ->build();
+```
+
+За замовчуванням розширення створюється в першому шляху з типовими групами
+шаблонів. Ви можете змінити ці значення та шлях до шаблонів для повного
+контролю.
+

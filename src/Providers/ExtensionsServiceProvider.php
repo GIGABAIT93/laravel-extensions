@@ -3,8 +3,10 @@
 namespace Gigabait93\Extensions\Providers;
 
 use Gigabait93\Extensions\Contracts\ActivatorInterface;
+use Gigabait93\Extensions\Services\ExtensionBuilder;
 use Gigabait93\Extensions\Services\ExtensionsService;
 use Gigabait93\Extensions\Entities\Extension;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 
@@ -23,6 +25,12 @@ class ExtensionsServiceProvider extends ServiceProvider
             return new ExtensionsService($app->make(ActivatorInterface::class), config('extensions.paths', []));
         });
         $this->app->alias(ExtensionsService::class, 'extensions');
+
+        // ExtensionBuilder
+        $this->app->singleton(ExtensionBuilder::class, function () {
+            return new ExtensionBuilder(new Filesystem());
+        });
+        $this->app->alias(ExtensionBuilder::class, 'extension.builder');
     }
 
     /** Bootstrap package features */

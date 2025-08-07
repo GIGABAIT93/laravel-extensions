@@ -94,3 +94,25 @@ class ThemeServiceProvider extends ServiceProvider
 ```
 
 After creating the files, run `php artisan extension:discover` to register the new extension.
+
+## Programmatic Builder
+
+Extensions can also be scaffolded programmatically for use in a web interface.
+Use the `ExtensionBuilder` facade:
+
+```php
+use Gigabait93\Extensions\Facades\ExtensionBuilder;
+
+// Available paths and stub groups
+$paths = ExtensionBuilder::paths();
+$groups = ExtensionBuilder::stubGroups();
+
+ExtensionBuilder::name('Blog')
+    ->in($paths[0])
+    ->stubs($groups)
+    ->build();
+```
+
+By default the extension is created in the first configured path with the
+default stub groups. You may override any of these values, including the stub
+root, for full control.
