@@ -69,21 +69,6 @@ return [
         ],
     ],
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Stubs Configuration
-    |--------------------------------------------------------------------------
-    | Path to the directory with stub templates and the default stub groups
-    | that should be generated when running in non-interactive mode. If the
-    | path is null the package's internal stubs will be used.
-    */
-    'stubs' => [
-        'path' => null,
-        'default' => [],
-    ],
-
-
     /*
     |--------------------------------------------------------------------------
     | Activator Class
