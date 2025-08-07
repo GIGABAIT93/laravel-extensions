@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 
 class MakeCommand extends Command
 {
-    protected $signature = 'extension:make {name?} {path?} {--stub=* : Stub groups to generate} {--interactive : Ask for missing values}';
+    protected $signature = 'extension:make {name?} {path?} {--stub=* : Stub groups to generate}';
     protected $description = 'Scaffold a new extension from stub files';
 
     protected Filesystem $files;
@@ -26,14 +26,13 @@ class MakeCommand extends Command
     public function handle(): void
     {
         if (empty($this->bases)) {
-            $this->error("Please configure at least one entry in config('extensions.paths')");
+            $this->error(trans('extensions::commands.paths_required'));
             return;
         }
 
-        $interactive = $this->option('interactive');
         $name = $this->argument('name');
         if (! $name) {
-            if (! $interactive) {
+            if ($this->input->isInteractive()) {
                 $this->error('Extension name is required');
                 return;
             }

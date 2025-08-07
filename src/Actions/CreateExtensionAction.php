@@ -20,7 +20,9 @@ class CreateExtensionAction
         $destination = rtrim($basePath, '/\\') . DIRECTORY_SEPARATOR . $name;
 
         if ($this->files->exists($destination)) {
-            throw new RuntimeException("Extension {$name} already exists at {$destination}");
+            throw new RuntimeException(
+                trans('extensions::messages.extension_exists', compact('name', 'destination'))
+            );
         }
 
         $this->generator->execute($name, $namespace, $destination, $type, $stubs);

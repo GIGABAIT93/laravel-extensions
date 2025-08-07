@@ -15,9 +15,9 @@ class DiscoverCommand extends Command
         $names = Extensions::discover();
 
         if (empty($names)) {
-            $this->info('No new extensions found.');
+            $this->info(trans('extensions::commands.no_new_extensions'));
         } else {
-            $this->info('Synchronized extensions: ' . implode(', ', $names));
+            $this->info(trans('extensions::commands.synchronized_extensions', ['names' => implode(', ', $names)]));
         }
     }
 }

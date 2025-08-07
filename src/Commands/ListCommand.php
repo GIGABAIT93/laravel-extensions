@@ -20,6 +20,10 @@ class ListCommand extends Command
             ];
         })->toArray();
 
-        $this->table(['Name', 'Status', 'Type'], $rows);
+        $this->table([
+            trans('extensions::commands.table_name'),
+            trans('extensions::commands.table_status'),
+            trans('extensions::commands.table_type'),
+        ], $rows);
     }
 }
