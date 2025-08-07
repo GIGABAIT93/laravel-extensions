@@ -45,6 +45,9 @@ class MigrateCommand extends AbstractCommand
         }
 
         $list->each(function ($ext) use ($force) {
+            if (!$ext->isActive()) {
+                return;
+            }
             $extName = $ext->getName();
             $this->info(trans('extensions::commands.processing_extension', ['name' => $extName]));
 
