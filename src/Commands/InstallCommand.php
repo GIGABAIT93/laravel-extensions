@@ -2,27 +2,23 @@
 
 namespace Gigabait93\Extensions\Commands;
 
-use Illuminate\Console\Command;
 use Gigabait93\Extensions\Facades\Extensions;
+use Gigabait93\Extensions\Commands\Concerns\InteractsWithExtensions;
+use function Laravel\Prompts\select;
 
-class InstallCommand extends Command
+class InstallCommand extends AbstractCommand
 {
+    use InteractsWithExtensions;
+
     protected $signature = 'extension:install {extension?} {--force}';
     protected $description = 'Set up a new extension (migrate + seed)';
 
     public function handle(): void
     {
-        $name = $this->argument('extension');
         $force = $this->option('force');
-
+        $name = $this->promptExtension('extensions::commands.select_extension_install');
         if (! $name) {
-            $list = Extensions::all()->map(fn($e) => $e->getName())->toArray();
-            if ($this->input->isInteractive()) {
-                $name = $this->choice(trans('extensions::commands.select_extension_install'), $list);
-            } else {
-                $this->error(trans('extensions::commands.extension_name_required'));
-                return;
-            }
+            return;
         }
 
         $result = Extensions::install($name, $force);

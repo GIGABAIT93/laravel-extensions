@@ -2,10 +2,10 @@
 
 namespace Gigabait93\Extensions\Commands;
 
-use Illuminate\Console\Command;
 use Gigabait93\Extensions\Facades\Extensions;
+use function Laravel\Prompts\table;
 
-class ListCommand extends Command
+class ListCommand extends AbstractCommand
 {
     protected $signature   = 'extension:list';
     protected $description = 'Outputs a list of all extensions';
@@ -20,7 +20,7 @@ class ListCommand extends Command
             ];
         })->toArray();
 
-        $this->table([
+        table([
             trans('extensions::commands.table_name'),
             trans('extensions::commands.table_status'),
             trans('extensions::commands.table_type'),
