@@ -7,6 +7,7 @@ use Gigabait93\Extensions\Actions\GenerateStubsAction;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
+use function Laravel\Prompts\{multiselect, select, text};
 
 class MakeCommand extends Command
 {
@@ -30,25 +31,20 @@ class MakeCommand extends Command
             return;
         }
 
-        $name = $this->argument('name');
+        $name = $this->argument('name')
+            ?: text(trans('extensions::commands.enter_extension_name'));
         if (! $name) {
-            if ($this->input->isInteractive()) {
-                $name = $this->ask(trans('extensions::commands.enter_extension_name'));
-            }
-            if (! $name) {
-                $this->error(trans('extensions::commands.extension_name_required'));
-                return;
-            }
+            $this->error(trans('extensions::commands.extension_name_required'));
+            return;
         }
         $name = Str::studly($name);
 
         $paths = array_values($this->bases);
         $basePath = $this->argument('path');
-        if ($basePath && in_array($basePath, $paths, true)) {
-            // ok
-        } elseif ($this->input->isInteractive()) {
-            $basePath = $this->choice(trans('extensions::commands.select_base_path'), $paths);
-        } else {
+        if (! ($basePath && in_array($basePath, $paths, true))) {
+            $basePath = select(trans('extensions::commands.select_base_path'), $paths, $paths[0] ?? null);
+        }
+        if (! $basePath) {
             $this->error(trans('extensions::commands.base_path_required'));
             return;
         }
@@ -61,24 +57,19 @@ class MakeCommand extends Command
         }
 
         $available = $this->availableStubs($stubRoot);
-        $stubs     = $this->option('stub');
+        $stubs = $this->option('stub');
         if (empty($stubs)) {
-            if ($this->input->isInteractive()) {
-                $optionAll = trans('extensions::commands.option_all');
-                $choices   = array_merge([$optionAll], $available);
-                $stubs     = $this->choice(trans('extensions::commands.select_stubs'), $choices, null, null, true);
-                if (in_array($optionAll, $stubs, true)) {
-                    $stubs = $available;
-                }
-            } else {
-                $stubs = config('extensions.stubs.default') ?: $available;
+            $optionAll = trans('extensions::commands.option_all');
+            $choices = array_merge([$optionAll], $available);
+            $default = array_values(array_diff(config('extensions.stubs.default') ?: $available, ['extension', 'providers']));
+            $stubs = multiselect(trans('extensions::commands.select_stubs'), $choices, $default);
+            if (in_array($optionAll, $stubs, true)) {
+                $stubs = $available;
             }
         }
 
         $stubs = array_map('strtolower', $stubs);
-        if (!in_array('extension', $stubs, true)) {
-            $stubs[] = 'extension';
-        }
+        $stubs = array_values(array_unique(array_merge($stubs, ['extension', 'providers'])));
 
         $generator = new GenerateStubsAction($this->files, $stubRoot);
         $action = new CreateExtensionAction($this->files, $generator);
@@ -105,6 +96,7 @@ class MakeCommand extends Command
             $group = Str::before($group, '.');
             $groups[] = Str::lower($group);
         }
-        return array_values(array_unique($groups));
+        $groups = array_values(array_unique($groups));
+        return array_values(array_diff($groups, ['extension', 'providers']));
     }
 }
