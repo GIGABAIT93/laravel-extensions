@@ -5,12 +5,6 @@
 1. Add the package repository to your application's `composer.json`:
 
 ```json
-"repositories": [
-    {
-        "type": "vcs",
-        "url": "https://github.com/GIGABAIT93/laravel-extensions"
-    }
-],
 "autoload": {
     "psr-4": {
         "Modules\\\\": "modules/"

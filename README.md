@@ -11,12 +11,6 @@ Full documentation: [English](docs/en/introduction.md) | [Українська](
 
 1. Add to your file `composer.json`:
    ```json
-   "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/GIGABAIT93/laravel-extensions"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "Modules\\": "modules/",
