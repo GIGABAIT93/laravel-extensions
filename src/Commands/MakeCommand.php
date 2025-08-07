@@ -64,10 +64,20 @@ class MakeCommand extends Command
         $stubs     = $this->option('stub');
         if (empty($stubs)) {
             if ($this->input->isInteractive()) {
-                $stubs = $this->choice(trans('extensions::commands.select_stubs'), $available, null, null, true);
+                $optionAll = trans('extensions::commands.option_all');
+                $choices   = array_merge([$optionAll], $available);
+                $stubs     = $this->choice(trans('extensions::commands.select_stubs'), $choices, null, null, true);
+                if (in_array($optionAll, $stubs, true)) {
+                    $stubs = $available;
+                }
             } else {
                 $stubs = config('extensions.stubs.default') ?: $available;
             }
+        }
+
+        $stubs = array_map('strtolower', $stubs);
+        if (!in_array('extension', $stubs, true)) {
+            $stubs[] = 'extension';
         }
 
         $generator = new GenerateStubsAction($this->files, $stubRoot);
