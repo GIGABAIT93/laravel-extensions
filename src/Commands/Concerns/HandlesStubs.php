@@ -48,7 +48,7 @@ trait HandlesStubs
             $optionAll = trans('extensions::commands.option_all');
             $choices = array_merge([$optionAll], $available);
             $default = array_values(array_diff(config('extensions.stubs.default') ?: $available, ['extension', 'providers']));
-            $stubs = multiselect(trans('extensions::commands.select_stubs'), $choices, $default);
+            $stubs = multiselect(trans('extensions::commands.select_stubs'), $choices, $default, scroll: 10);
             if (in_array($optionAll, $stubs, true)) {
                 $stubs = $available;
             }
