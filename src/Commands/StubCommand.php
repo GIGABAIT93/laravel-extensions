@@ -2,16 +2,16 @@
 
 namespace Gigabait93\Extensions\Commands;
 
-use Gigabait93\Extensions\Actions\CreateExtensionAction;
+use Gigabait93\Extensions\Actions\AddStubsAction;
 use Gigabait93\Extensions\Actions\GenerateStubsAction;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
-class MakeCommand extends Command
+class StubCommand extends Command
 {
-    protected $signature = 'extension:make {name?} {path?} {--stub=* : Stub groups to generate} {--interactive : Ask for missing values}';
-    protected $description = 'Scaffold a new extension from stub files';
+    protected $signature = 'extension:stub {name?} {path?} {--stub=* : Stub groups to generate} {--interactive : Ask for missing values}';
+    protected $description = 'Generate additional stubs for an existing extension';
 
     protected Filesystem $files;
     protected array $bases;
@@ -31,26 +31,33 @@ class MakeCommand extends Command
         }
 
         $interactive = $this->option('interactive');
-        $name = $this->argument('name');
-        if (! $name) {
-            if (! $interactive) {
-                $this->error('Extension name is required');
-                return;
-            }
-            $name = $this->ask('Enter extension name');
-        }
-        $name = Str::studly($name);
-
         $paths = array_values($this->bases);
-        $inputPath = $this->argument('path');
-        if ($inputPath && in_array($inputPath, $paths, true)) {
-            $basePath = $inputPath;
+        $basePath = $this->argument('path');
+        if ($basePath && in_array($basePath, $paths, true)) {
+            // ok
         } elseif ($interactive) {
             $basePath = $this->choice('Select base path for the extension', $paths);
         } else {
             $this->error('Base path is required');
             return;
         }
+
+        $extensions = array_map(fn($p) => basename($p), $this->files->directories($basePath));
+
+        $name = $this->argument('name');
+        if ($name && in_array($name, $extensions, true)) {
+            // ok
+        } elseif ($interactive) {
+            if (empty($extensions)) {
+                $this->error('No extensions found in selected path');
+                return;
+            }
+            $name = $this->choice('Select extension', $extensions);
+        } else {
+            $this->error('Extension name is required');
+            return;
+        }
+        $name = Str::studly($name);
 
         $stubRoot = config('extensions.stubs.path');
         $available = $this->availableStubs($stubRoot);
@@ -64,7 +71,7 @@ class MakeCommand extends Command
         }
 
         $generator = new GenerateStubsAction($this->files, $stubRoot);
-        $action = new CreateExtensionAction($this->files, $generator);
+        $action = new AddStubsAction($this->files, $generator);
         $type = basename($basePath);
         try {
             $action->execute($name, $basePath, $type, $stubs);
@@ -73,9 +80,7 @@ class MakeCommand extends Command
             return;
         }
 
-        $namespace = ucfirst(basename($basePath));
-        $destination = rtrim($basePath, '/\\') . DIRECTORY_SEPARATOR . $name;
-        $this->info("Extension {$name} created in namespace {$namespace} at {$destination}");
+        $this->info('Stubs generated successfully');
     }
 
     protected function availableStubs(string $stubRoot): array
