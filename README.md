@@ -52,8 +52,22 @@ Full documentation: [English](docs/en/introduction.md) | [Українська](
 | `extension:disable {extension}` | Disables a specific extension.                                            |
 | `extension:delete {extension}`  | Deletes a specific extension.                                             |
 | `extension:discover`            | Scans the extensions directory and synchronizes new extensions.           |
-| `extension:install {extension}` | Installs a specific extension.                                            |
-| `extension:meke {extension}`    | Interactive creation of a new extension (type based on path). |
+| `extension:install {extension}` | Installs a specific extension (migrate + seed).                           |
+| `extension:make {name}`         | Interactive creation of a new extension (type based on path).             |
+| `extension:stub {name}`         | Generates additional stubs for an existing extension.                     |
+| `extension:migrate {name?}`     | Runs migrations and seeders for extensions.                               |
+
+#### Command Usage Examples
+
+- `php artisan extension:list` – show all extensions.
+- `php artisan extension:enable Blog` – enable the "Blog" extension.
+- `php artisan extension:disable Blog` – disable the "Blog" extension.
+- `php artisan extension:delete Blog` – remove the "Blog" extension.
+- `php artisan extension:discover` – discover new extensions.
+- `php artisan extension:install Blog` – run migrations and seeds for "Blog".
+- `php artisan extension:make Blog modules` – scaffold a "Blog" extension in `modules`.
+- `php artisan extension:stub Blog modules` – generate stubs for the "Blog" extension.
+- `php artisan extension:migrate --force` – migrate all extensions without confirmation.
 
 ---
 
