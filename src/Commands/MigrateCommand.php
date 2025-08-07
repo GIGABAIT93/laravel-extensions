@@ -9,23 +9,32 @@ class MigrateCommand extends AbstractCommand
 {
     protected $signature   = 'extension:migrate
                             {name? : Extension name (default - all)}
+                            {--all : Run migrations for all extensions}
                             {--force : Force the operation without confirmation}';
     protected $description = 'Run migrations and seeders for one or all extensions';
 
     public function handle(): void
     {
         $force = $this->option('force');
+        $all   = $this->option('all');
         $name  = $this->argument('name');
 
         $list = Extensions::all();
 
-        if ($name) {
+        if ($name and !$all) {
             $list = $list->filter(fn($e) => $e->getName() === $name);
-        } elseif ($this->input->isInteractive()) {
+        } elseif ($this->input->isInteractive() and !$all) {
             $choices = $list->map(fn($e) => $e->getName())->toArray();
-            $choices[] = trans('extensions::commands.option_all');
-            $choice = select(trans('extensions::commands.select_extension_migrate'), $choices, $choices[0] ?? null);
-            if ($choice !== trans('extensions::commands.option_all')) {
+            $allLabel = trans('extensions::commands.option_all');
+            $choices['all'] = $allLabel;
+
+            $choice = select(
+                trans('extensions::commands.select_extension_migrate'),
+                $choices,
+                $choices[0] ?? null
+            );
+
+            if ($choice !== 'all') {
                 $list = $list->filter(fn($e) => $e->getName() === $choice);
             }
         }
@@ -39,7 +48,6 @@ class MigrateCommand extends AbstractCommand
             $extName = $ext->getName();
             $this->info(trans('extensions::commands.processing_extension', ['name' => $extName]));
 
-            // Install wraps migrate + seed
             $result = Extensions::install($extName, $force);
             $this->info(trans('extensions::commands.processed_extension', ['result' => $result]));
             $this->line('');
