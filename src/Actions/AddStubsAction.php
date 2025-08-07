@@ -20,7 +20,9 @@ class AddStubsAction
         $destination = rtrim($basePath, '/\\') . DIRECTORY_SEPARATOR . $name;
 
         if (!$this->files->exists($destination)) {
-            throw new RuntimeException("Extension {$name} does not exist at {$destination}");
+            throw new RuntimeException(
+                trans('extensions::messages.extension_missing', compact('name', 'destination'))
+            );
         }
 
         $this->generator->execute($name, $namespace, $destination, $type, $stubs);

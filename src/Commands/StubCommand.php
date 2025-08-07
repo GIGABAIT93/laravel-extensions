@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 
 class StubCommand extends Command
 {
-    protected $signature = 'extension:stub {name?} {path?} {--stub=* : Stub groups to generate} {--interactive : Ask for missing values}';
+    protected $signature = 'extension:stub {name?} {path?} {--stub=* : Stub groups to generate}';
     protected $description = 'Generate additional stubs for an existing extension';
 
     protected Filesystem $files;
@@ -26,19 +26,18 @@ class StubCommand extends Command
     public function handle(): void
     {
         if (empty($this->bases)) {
-            $this->error("Please configure at least one entry in config('extensions.paths')");
+            $this->error(trans('extensions::commands.paths_required'));
             return;
         }
 
-        $interactive = $this->option('interactive');
         $paths = array_values($this->bases);
         $basePath = $this->argument('path');
         if ($basePath && in_array($basePath, $paths, true)) {
             // ok
-        } elseif ($interactive) {
-            $basePath = $this->choice('Select base path for the extension', $paths);
+        } elseif ($this->input->isInteractive()) {
+            $basePath = $this->choice(trans('extensions::commands.select_base_path'), $paths);
         } else {
-            $this->error('Base path is required');
+            $this->error(trans('extensions::commands.base_path_required'));
             return;
         }
 
@@ -47,14 +46,14 @@ class StubCommand extends Command
         $name = $this->argument('name');
         if ($name && in_array($name, $extensions, true)) {
             // ok
-        } elseif ($interactive) {
+        } elseif ($this->input->isInteractive()) {
             if (empty($extensions)) {
-                $this->error('No extensions found in selected path');
+                $this->error(trans('extensions::commands.no_extensions_found_in_path'));
                 return;
             }
-            $name = $this->choice('Select extension', $extensions);
+            $name = $this->choice(trans('extensions::commands.select_extension'), $extensions);
         } else {
-            $this->error('Extension name is required');
+            $this->error(trans('extensions::commands.extension_name_required'));
             return;
         }
         $name = Str::studly($name);
@@ -63,8 +62,8 @@ class StubCommand extends Command
         $available = $this->availableStubs($stubRoot);
         $stubs = $this->option('stub');
         if (empty($stubs)) {
-            if ($interactive) {
-                $stubs = $this->choice('Select stubs to generate', $available, null, null, true);
+            if ($this->input->isInteractive()) {
+                $stubs = $this->choice(trans('extensions::commands.select_stubs'), $available, null, null, true);
             } else {
                 $stubs = config('extensions.stubs.default', $available);
             }
@@ -80,7 +79,7 @@ class StubCommand extends Command
             return;
         }
 
-        $this->info('Stubs generated successfully');
+        $this->info(trans('extensions::commands.stubs_generated'));
     }
 
     protected function availableStubs(string $stubRoot): array

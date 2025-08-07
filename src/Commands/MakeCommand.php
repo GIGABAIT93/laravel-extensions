@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 
 class MakeCommand extends Command
 {
-    protected $signature = 'extension:make {name?} {path?} {--stub=* : Stub groups to generate} {--interactive : Ask for missing values}';
+    protected $signature = 'extension:make {name?} {path?} {--stub=* : Stub groups to generate}';
     protected $description = 'Scaffold a new extension from stub files';
 
     protected Filesystem $files;
@@ -26,29 +26,30 @@ class MakeCommand extends Command
     public function handle(): void
     {
         if (empty($this->bases)) {
-            $this->error("Please configure at least one entry in config('extensions.paths')");
+            $this->error(trans('extensions::commands.paths_required'));
             return;
         }
 
-        $interactive = $this->option('interactive');
         $name = $this->argument('name');
         if (! $name) {
-            if (! $interactive) {
-                $this->error('Extension name is required');
+            if ($this->input->isInteractive()) {
+                $name = $this->ask(trans('extensions::commands.enter_extension_name'));
+            }
+            if (! $name) {
+                $this->error(trans('extensions::commands.extension_name_required'));
                 return;
             }
-            $name = $this->ask('Enter extension name');
         }
         $name = Str::studly($name);
 
         $paths = array_values($this->bases);
-        $inputPath = $this->argument('path');
-        if ($inputPath && in_array($inputPath, $paths, true)) {
-            $basePath = $inputPath;
-        } elseif ($interactive) {
-            $basePath = $this->choice('Select base path for the extension', $paths);
+        $basePath = $this->argument('path');
+        if ($basePath && in_array($basePath, $paths, true)) {
+            // ok
+        } elseif ($this->input->isInteractive()) {
+            $basePath = $this->choice(trans('extensions::commands.select_base_path'), $paths);
         } else {
-            $this->error('Base path is required');
+            $this->error(trans('extensions::commands.base_path_required'));
             return;
         }
 
@@ -56,8 +57,8 @@ class MakeCommand extends Command
         $available = $this->availableStubs($stubRoot);
         $stubs = $this->option('stub');
         if (empty($stubs)) {
-            if ($interactive) {
-                $stubs = $this->choice('Select stubs to generate', $available, null, null, true);
+            if ($this->input->isInteractive()) {
+                $stubs = $this->choice(trans('extensions::commands.select_stubs'), $available, null, null, true);
             } else {
                 $stubs = config('extensions.stubs.default', $available);
             }
@@ -75,7 +76,7 @@ class MakeCommand extends Command
 
         $namespace = ucfirst(basename($basePath));
         $destination = rtrim($basePath, '/\\') . DIRECTORY_SEPARATOR . $name;
-        $this->info("Extension {$name} created in namespace {$namespace} at {$destination}");
+        $this->info(trans('extensions::commands.extension_created', compact('name', 'namespace', 'destination')));
     }
 
     protected function availableStubs(string $stubRoot): array

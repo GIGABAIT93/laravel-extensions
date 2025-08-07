@@ -28,6 +28,9 @@ class ExtensionsServiceProvider extends ServiceProvider
     /** Bootstrap package features */
     public function boot(): void
     {
+        $this->loadTranslationsFrom(__DIR__ . '/../../lang', 'extensions');
+        $this->publishes([__DIR__ . '/../../lang' => lang_path('vendor/extensions')], 'extensions');
+
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->publishes([
             __DIR__ . '/../../config/extensions.php' => config_path('extensions.php'),
