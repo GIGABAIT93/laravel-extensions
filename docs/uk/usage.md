@@ -42,8 +42,22 @@ php artisan migrate
 | `extension:disable {extension}` | Вимикає конкретне розширення. |
 | `extension:delete {extension}` | Видаляє розширення з системи. |
 | `extension:discover` | Сканує шляхи та синхронізує нові розширення. |
-| `extension:install {extension}` | Запускає процедури встановлення розширення. |
-| `extension:meke {extension}` | Інтерактивно створює нове розширення. |
+| `extension:install {extension}` | Запускає процедури встановлення розширення (міграції та сідери). |
+| `extension:make {name}` | Інтерактивно створює нове розширення. |
+| `extension:stub {name}` | Генерує додаткові заготовки для наявного розширення. |
+| `extension:migrate {name?}` | Запускає міграції та сідери для розширень. |
+
+## Приклади використання команд
+
+- `php artisan extension:list` – показує всі розширення.
+- `php artisan extension:enable Blog` – вмикає розширення "Blog".
+- `php artisan extension:disable Blog` – вимикає розширення "Blog".
+- `php artisan extension:delete Blog` – видаляє розширення "Blog".
+- `php artisan extension:discover` – знаходить нові розширення.
+- `php artisan extension:install Blog` – запускає міграції та сідери для "Blog".
+- `php artisan extension:make Blog modules` – створює каркас розширення "Blog" у `modules`.
+- `php artisan extension:stub Blog modules` – генерує додаткові заготовки для "Blog".
+- `php artisan extension:migrate --force` – запускає міграції для всіх розширень без підтвердження.
 
 ## Створення розширення
 
