@@ -28,6 +28,9 @@
       ]
     }
   },
+  "archive": {
+    "exclude": ["docs"]
+  },
   "minimum-stability": "stable",
   "prefer-stable": true
 }

@@ -7,12 +7,12 @@ use Gigabait93\Extensions\Facades\Extensions;
 
 class InstallCommand extends Command
 {
-    protected $signature   = 'extension:install {extension?} {--force}';
+    protected $signature = 'extension:install {extension?} {--force}';
     protected $description = 'Set up a new extension (migrate + seed)';
 
     public function handle(): void
     {
-        $name  = $this->argument('extension');
+        $name = $this->argument('extension');
         $force = $this->option('force');
 
         if (! $name) {

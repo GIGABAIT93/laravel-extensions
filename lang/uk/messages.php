@@ -12,4 +12,3 @@ return [
     'extension_exists' => "Розширення :name вже існує за шляхом :destination.",
     'extension_missing' => "Розширення :name не існує за шляхом :destination.",
 ];
-

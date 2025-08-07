@@ -12,4 +12,3 @@ return [
     'extension_exists' => "Extension :name already exists at :destination.",
     'extension_missing' => "Extension :name does not exist at :destination.",
 ];
-
