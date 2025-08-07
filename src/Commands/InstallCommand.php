@@ -15,6 +15,16 @@ class InstallCommand extends Command
         $name = $this->argument('extension');
         $force = $this->option('force');
 
+        if (! $name) {
+            $list = Extensions::all()->map(fn($e) => $e->getName())->toArray();
+            if ($this->input->isInteractive()) {
+                $name = $this->choice(trans('extensions::commands.select_extension_install'), $list);
+            } else {
+                $this->error(trans('extensions::commands.extension_name_required'));
+                return;
+            }
+        }
+
         $result = Extensions::install($name, $force);
         $this->info($result);
     }

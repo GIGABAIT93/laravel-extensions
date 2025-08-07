@@ -18,7 +18,7 @@ trait ManagesExtensions
     {
         $ext = $this->get($name);
         if (! $ext) {
-            return "Extension '{$name}' not found.";
+            return trans('extensions::messages.extension_not_found', compact('name'));
         }
 
         if ($mp = $ext->getMigrationPath()) {
@@ -36,7 +36,7 @@ trait ManagesExtensions
 
         $this->callExtensionEvent($ext, 'onInstall');
         $this->invalidateCache();
-        return "Extension '{$name}' installed.";
+        return trans('extensions::messages.extension_installed', compact('name'));
     }
 
     /**
@@ -67,7 +67,9 @@ trait ManagesExtensions
         if ($ok && $ext) {
             $this->callExtensionEvent($ext, 'onEnable');
         }
-        return $ok ? "Extension enabled." : "Enable failed.";
+        return $ok
+            ? trans('extensions::messages.extension_enabled')
+            : trans('extensions::messages.enable_failed');
     }
 
     /**
@@ -76,7 +78,7 @@ trait ManagesExtensions
     public function disable(string $name): string
     {
         if (! $this->canDisable($name)) {
-            return "Extension '{$name}' is protected.";
+            return trans('extensions::messages.extension_protected', compact('name'));
         }
         $ext = $this->get($name);
         $ok  = $this->activator->setStatus($name, false);
@@ -84,7 +86,9 @@ trait ManagesExtensions
         if ($ok && $ext) {
             $this->callExtensionEvent($ext, 'onDisable');
         }
-        return $ok ? "Extension disabled." : "Disable failed.";
+        return $ok
+            ? trans('extensions::messages.extension_disabled')
+            : trans('extensions::messages.disable_failed');
     }
 
     /**
@@ -93,7 +97,7 @@ trait ManagesExtensions
     public function delete(string $name): string
     {
         if ($this->isProtected($name)) {
-            return "Extension '{$name}' is protected.";
+            return trans('extensions::messages.extension_protected', compact('name'));
         }
 
         $ext     = $this->get($name);
@@ -110,7 +114,9 @@ trait ManagesExtensions
         }
 
         $this->invalidateCache();
-        return $deleted ? "Extension '{$name}' deleted." : "Extension '{$name}' not found.";
+        return $deleted
+            ? trans('extensions::messages.extension_deleted', compact('name'))
+            : trans('extensions::messages.extension_not_found', compact('name'));
     }
 
     /**

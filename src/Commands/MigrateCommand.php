@@ -21,23 +21,30 @@ class MigrateCommand extends Command
 
         if ($name) {
             $list = $list->filter(fn($e) => $e->getName() === $name);
+        } elseif ($this->input->isInteractive()) {
+            $choices = $list->map(fn($e) => $e->getName())->toArray();
+            $choices[] = trans('extensions::commands.option_all');
+            $choice = $this->choice(trans('extensions::commands.select_extension_migrate'), $choices);
+            if ($choice !== trans('extensions::commands.option_all')) {
+                $list = $list->filter(fn($e) => $e->getName() === $choice);
+            }
         }
 
         if ($list->isEmpty()) {
-            $this->warn('No extensions to process.');
+            $this->warn(trans('extensions::commands.no_extensions_to_process'));
             return;
         }
 
         $list->each(function ($ext) use ($force) {
             $extName = $ext->getName();
-            $this->info("→ Processing extension '{$extName}'");
+            $this->info(trans('extensions::commands.processing_extension', ['name' => $extName]));
 
             // Install wraps migrate + seed
             $result = Extensions::install($extName, $force);
-            $this->info("✔ {$result}");
+            $this->info(trans('extensions::commands.processed_extension', ['result' => $result]));
             $this->line('');
         });
 
-        $this->info('All requested extensions processed.');
+        $this->info(trans('extensions::commands.all_processed'));
     }
 }

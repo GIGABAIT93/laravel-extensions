@@ -32,14 +32,13 @@ class GenerateStubsAction
             $stubPath = $file->getPathname();
             $rel = Str::after($stubPath, $this->stubRoot . DIRECTORY_SEPARATOR);
             $rel = str_replace('\\', '/', $rel);
-            $segments = explode('/', $rel, 2);
-            $group = Str::before($segments[0], '.');
+            $group = Str::before($rel, '/');
+            $group = Str::before($group, '.');
 
             if (!in_array(Str::lower($group), $groups, true)) {
                 continue;
             }
 
-            $rel = $segments[1] ?? $segments[0];
 
             if (preg_match('#^Database/Migrations/migration_create_.*\\.stub$#', $rel)) {
                 $timestamp = now()->format('Y_m_d_His');

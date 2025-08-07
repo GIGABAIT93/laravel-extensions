@@ -7,10 +7,11 @@ use Gigabait93\Extensions\Actions\GenerateStubsAction;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
+use function Laravel\Prompts\{multiselect, select};
 
 class StubCommand extends Command
 {
-    protected $signature = 'extension:stub {name?} {path?} {--stub=* : Stub groups to generate} {--interactive : Ask for missing values}';
+    protected $signature = 'extension:stub {name?} {path?} {--stub=* : Stub groups to generate}';
     protected $description = 'Generate additional stubs for an existing extension';
 
     protected Filesystem $files;
@@ -26,35 +27,32 @@ class StubCommand extends Command
     public function handle(): void
     {
         if (empty($this->bases)) {
-            $this->error("Please configure at least one entry in config('extensions.paths')");
+            $this->error(trans('extensions::commands.paths_required'));
             return;
         }
 
-        $interactive = $this->option('interactive');
         $paths = array_values($this->bases);
         $basePath = $this->argument('path');
-        if ($basePath && in_array($basePath, $paths, true)) {
-            // ok
-        } elseif ($interactive) {
-            $basePath = $this->choice('Select base path for the extension', $paths);
-        } else {
-            $this->error('Base path is required');
+        if (! ($basePath && in_array($basePath, $paths, true))) {
+            $basePath = select(trans('extensions::commands.select_base_path'), $paths, $paths[0] ?? null);
+        }
+        if (! $basePath) {
+            $this->error(trans('extensions::commands.base_path_required'));
             return;
         }
 
         $extensions = array_map(fn($p) => basename($p), $this->files->directories($basePath));
 
         $name = $this->argument('name');
-        if ($name && in_array($name, $extensions, true)) {
-            // ok
-        } elseif ($interactive) {
+        if (! ($name && in_array($name, $extensions, true))) {
             if (empty($extensions)) {
-                $this->error('No extensions found in selected path');
+                $this->error(trans('extensions::commands.no_extensions_found_in_path'));
                 return;
             }
-            $name = $this->choice('Select extension', $extensions);
-        } else {
-            $this->error('Extension name is required');
+            $name = select(trans('extensions::commands.select_extension'), $extensions);
+        }
+        if (! $name) {
+            $this->error(trans('extensions::commands.extension_name_required'));
             return;
         }
         $name = Str::studly($name);
@@ -63,12 +61,17 @@ class StubCommand extends Command
         $available = $this->availableStubs($stubRoot);
         $stubs = $this->option('stub');
         if (empty($stubs)) {
-            if ($interactive) {
-                $stubs = $this->choice('Select stubs to generate', $available, null, null, true);
-            } else {
-                $stubs = config('extensions.stubs.default', $available);
+            $optionAll = trans('extensions::commands.option_all');
+            $choices = array_merge([$optionAll], $available);
+            $default = array_values(array_diff(config('extensions.stubs.default') ?: $available, ['extension', 'providers']));
+            $stubs = multiselect(trans('extensions::commands.select_stubs'), $choices, $default);
+            if (in_array($optionAll, $stubs, true)) {
+                $stubs = $available;
             }
         }
+
+        $stubs = array_map('strtolower', $stubs);
+        $stubs = array_values(array_unique(array_merge($stubs, ['extension', 'providers'])));
 
         $generator = new GenerateStubsAction($this->files, $stubRoot);
         $action = new AddStubsAction($this->files, $generator);
@@ -80,7 +83,7 @@ class StubCommand extends Command
             return;
         }
 
-        $this->info('Stubs generated successfully');
+        $this->info(trans('extensions::commands.stubs_generated'));
     }
 
     protected function availableStubs(string $stubRoot): array
@@ -93,6 +96,7 @@ class StubCommand extends Command
             $group = Str::before($group, '.');
             $groups[] = Str::lower($group);
         }
-        return array_values(array_unique($groups));
+        $groups = array_values(array_unique($groups));
+        return array_values(array_diff($groups, ['extension', 'providers']));
     }
 }

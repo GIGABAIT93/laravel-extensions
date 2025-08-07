@@ -7,6 +7,7 @@ use Gigabait93\Extensions\Actions\GenerateStubsAction;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
+use function Laravel\Prompts\{multiselect, select, text};
 
 class MakeCommand extends Command
 {
@@ -30,37 +31,45 @@ class MakeCommand extends Command
             return;
         }
 
-        $name = $this->argument('name');
+        $name = $this->argument('name')
+            ?: text(trans('extensions::commands.enter_extension_name'));
         if (! $name) {
-            if ($this->input->isInteractive()) {
-                $this->error('Extension name is required');
-                return;
-            }
-            $name = $this->ask('Enter extension name');
+            $this->error(trans('extensions::commands.extension_name_required'));
+            return;
         }
         $name = Str::studly($name);
 
         $paths = array_values($this->bases);
-        $inputPath = $this->argument('path');
-        if ($inputPath && in_array($inputPath, $paths, true)) {
-            $basePath = $inputPath;
-        } elseif ($interactive) {
-            $basePath = $this->choice('Select base path for the extension', $paths);
-        } else {
-            $this->error('Base path is required');
+        $basePath = $this->argument('path');
+        if (! ($basePath && in_array($basePath, $paths, true))) {
+            $basePath = select(trans('extensions::commands.select_base_path'), $paths, $paths[0] ?? null);
+        }
+        if (! $basePath) {
+            $this->error(trans('extensions::commands.base_path_required'));
             return;
         }
 
-        $stubRoot = config('extensions.stubs.path');
+        $stubRoot = config('extensions.stubs.path')
+            ?: dirname(__DIR__, 2) . '/stubs/Extension';
+        if (! $this->files->isDirectory($stubRoot)) {
+            $this->error(trans('extensions::commands.stubs_path_required'));
+            return;
+        }
+
         $available = $this->availableStubs($stubRoot);
         $stubs = $this->option('stub');
         if (empty($stubs)) {
-            if ($interactive) {
-                $stubs = $this->choice('Select stubs to generate', $available, null, null, true);
-            } else {
-                $stubs = config('extensions.stubs.default', $available);
+            $optionAll = trans('extensions::commands.option_all');
+            $choices = array_merge([$optionAll], $available);
+            $default = array_values(array_diff(config('extensions.stubs.default') ?: $available, ['extension', 'providers']));
+            $stubs = multiselect(trans('extensions::commands.select_stubs'), $choices, $default);
+            if (in_array($optionAll, $stubs, true)) {
+                $stubs = $available;
             }
         }
+
+        $stubs = array_map('strtolower', $stubs);
+        $stubs = array_values(array_unique(array_merge($stubs, ['extension', 'providers'])));
 
         $generator = new GenerateStubsAction($this->files, $stubRoot);
         $action = new CreateExtensionAction($this->files, $generator);
@@ -74,7 +83,7 @@ class MakeCommand extends Command
 
         $namespace = ucfirst(basename($basePath));
         $destination = rtrim($basePath, '/\\') . DIRECTORY_SEPARATOR . $name;
-        $this->info("Extension {$name} created in namespace {$namespace} at {$destination}");
+        $this->info(trans('extensions::commands.extension_created', compact('name', 'namespace', 'destination')));
     }
 
     protected function availableStubs(string $stubRoot): array
@@ -87,6 +96,7 @@ class MakeCommand extends Command
             $group = Str::before($group, '.');
             $groups[] = Str::lower($group);
         }
-        return array_values(array_unique($groups));
+        $groups = array_values(array_unique($groups));
+        return array_values(array_diff($groups, ['extension', 'providers']));
     }
 }

@@ -6,6 +6,7 @@ return [
     'enter_extension_name' => 'Введіть назву розширення',
     'base_path_required' => 'Потрібно вказати базовий шлях',
     'select_base_path' => 'Виберіть базовий шлях для розширення',
+    'stubs_path_required' => 'Потрібен шлях до шаблонів',
     'select_stubs' => 'Виберіть шаблони для генерації',
     'extension_created' => 'Розширення :name створено в просторі імен :namespace за шляхом :destination',
     'no_extensions_found_in_path' => 'У вибраному шляху розширень не знайдено',

@@ -14,9 +14,9 @@ class ListCommand extends Command
     {
         $rows = Extensions::all()->map(function ($ext) {
             return [
-                'Name'   => $ext->getName(),
-                'Status' => $ext->isActive() ? 'active' : 'inactive',
-                'Type'   => $ext->getType(),
+                $ext->getName(),
+                $ext->isActive() ? trans('extensions::commands.status_active') : trans('extensions::commands.status_inactive'),
+                $ext->getType(),
             ];
         })->toArray();
 
