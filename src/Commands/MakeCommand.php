@@ -53,14 +53,20 @@ class MakeCommand extends Command
             return;
         }
 
-        $stubRoot = config('extensions.stubs.path');
+        $stubRoot = config('extensions.stubs.path')
+            ?: dirname(__DIR__, 2) . '/stubs/Extension';
+        if (! $this->files->isDirectory($stubRoot)) {
+            $this->error(trans('extensions::commands.stubs_path_required'));
+            return;
+        }
+
         $available = $this->availableStubs($stubRoot);
-        $stubs = $this->option('stub');
+        $stubs     = $this->option('stub');
         if (empty($stubs)) {
             if ($this->input->isInteractive()) {
                 $stubs = $this->choice(trans('extensions::commands.select_stubs'), $available, null, null, true);
             } else {
-                $stubs = config('extensions.stubs.default', $available);
+                $stubs = config('extensions.stubs.default') ?: $available;
             }
         }
 
