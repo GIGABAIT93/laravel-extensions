@@ -38,6 +38,9 @@ class ExtensionBuilder
     public function in(string $basePath): self
     {
         $this->basePath = $basePath;
+        if (! $this->files->isDirectory($basePath)) {
+            $this->files->makeDirectory($basePath, 0755, true, true);
+        }
 
         return $this;
     }
