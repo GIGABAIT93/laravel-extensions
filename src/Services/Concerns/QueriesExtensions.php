@@ -71,11 +71,14 @@ trait QueriesExtensions
     /**
      * Return only active extensions.
      *
+     * @param  string|null  $type
      * @return Collection<string, Extension>
      */
-    public function active(): Collection
+    public function active(?string $type = null): Collection
     {
-        return $this->all()->filter(fn(Extension $e) => $e->isActive());
+        return $this->all()->filter(
+            fn (Extension $e) => $e->isActive() && ($type === null || $e->getType() === $type)
+        );
     }
 
     /**
