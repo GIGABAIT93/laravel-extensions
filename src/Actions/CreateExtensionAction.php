@@ -24,7 +24,7 @@ class CreateExtensionAction
                 trans('extensions::messages.extension_exists', compact('name', 'destination'))
             );
         }
-
+        $type = strtolower($type);
         $this->generator->execute($name, $namespace, $destination, $type, $stubs);
     }
 }
