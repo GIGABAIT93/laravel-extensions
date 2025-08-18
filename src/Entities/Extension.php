@@ -37,7 +37,7 @@ class Extension
 
     public function getType(): string
     {
-        return $this->type;
+        return strtolower($this->type);
     }
 
     public function getVersion(): string

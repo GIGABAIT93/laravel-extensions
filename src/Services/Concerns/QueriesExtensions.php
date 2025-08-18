@@ -77,7 +77,7 @@ trait QueriesExtensions
     public function active(?string $type = null): Collection
     {
         return $this->all()->filter(
-            fn (Extension $e) => $e->isActive() && ($type === null || $e->getType() === $type)
+            fn (Extension $e) => $e->isActive() && ($type === null || $e->getType() === strtolower($type))
         );
     }
 
@@ -107,7 +107,7 @@ trait QueriesExtensions
      */
     public function getByType(string $type): Collection
     {
-        return $this->filterExtensions(fn(Extension $e) => $e->getType() === $type);
+        return $this->filterExtensions(fn(Extension $e) => $e->getType() === strtolower($type));
     }
 
     /**
@@ -147,6 +147,6 @@ trait QueriesExtensions
      */
     public function getByTypeAndName(string $type, string $name): Collection
     {
-        return $this->filterExtensions(fn(Extension $e) => $e->getType() === $type && $e->getName() === $name);
+        return $this->filterExtensions(fn(Extension $e) => $e->getType() === strtolower($type) && $e->getName() === $name);
     }
 }
