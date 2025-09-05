@@ -55,10 +55,20 @@ return [
     */
     'stubs' => [
         'path' => base_path('vendor/gigabait93/laravel-extensions/stubs/Extension'),
+        // If you want to always use specific groups and skip prompts,
+        // set 'use' to an array of groups (e.g. ['extension','providers','http']).
+        // Leave null/empty to allow CLI selection.
+        'use' => null,
+        // When true, show interactive prompt to pick stub groups
+        // (ignored if 'use' is non-empty). When false, 'default' is used.
+        'prompt' => true,
         'default' => [
             'extension',
             'events',
             'http',
+            'routes',
+            'resources',
+            'console',
             'models',
             'lang',
             'services',

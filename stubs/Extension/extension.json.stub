@@ -2,5 +2,6 @@
   "name": "{{name}}",
   "provider": "{{namespace}}\\{{name}}\\Providers\\{{name}}ServiceProvider",
   "type": "{{type}}",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "author": "GIGABAIT"
 }

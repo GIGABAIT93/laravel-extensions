@@ -1,0 +1,25 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Notifications;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+
+class {{name}}Notification extends Notification
+{
+    use Queueable;
+
+    public function via(object $notifiable): array
+    {
+        return ['mail'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject('{{name}} Notification')
+            ->line('This is a notification from the {{name}} extension.');
+    }
+}
+

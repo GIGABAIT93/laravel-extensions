@@ -17,7 +17,13 @@ class {{name}}ServiceProvider extends ServiceProvider
         // $this->publishes([
         //     __DIR__ . '/../Config/config.php' => config_path('{{snake}}.php'),
         // ], '{{snake}}');
-        $this->loadViewsFrom(__DIR__ . '/../Resources', '{{snake}}');
-        $this->loadTranslationsFrom(__DIR__ . '/../Lang', '{{snake}}');
+        // if (file_exists(__DIR__ . '/../Routes/web.php')) {
+        //     $this->loadRoutesFrom(__DIR__ . '/../Routes/web.php');
+        // }
+        // if (file_exists(__DIR__ . '/../Routes/api.php')) {
+        //     $this->loadRoutesFrom(__DIR__ . '/../Routes/api.php');
+        // }
+        // $this->loadViewsFrom(__DIR__ . '/../Resources/views', '{{snake}}');
+        // $this->loadTranslationsFrom(__DIR__ . '/../Lang', '{{snake}}');
     }
 }

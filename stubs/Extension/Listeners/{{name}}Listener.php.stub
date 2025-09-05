@@ -1,0 +1,12 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Listeners;
+
+class {{name}}Listener
+{
+    public function handle(mixed $event): void
+    {
+        //
+    }
+}
+

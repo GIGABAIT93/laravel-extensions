@@ -1,0 +1,18 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Console\Commands;
+
+use Illuminate\Console\Command;
+
+class {{name}}Command extends Command
+{
+    protected $signature = '{{snake}}:example';
+    protected $description = 'Example command for {{name}} extension';
+
+    public function handle(): int
+    {
+        $this->info('Running {{name}} command...');
+        return Command::SUCCESS;
+    }
+}
+

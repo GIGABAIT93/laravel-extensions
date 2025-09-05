@@ -45,12 +45,25 @@ trait HandlesStubs
     {
         $stubs = $this->option('stub');
         if (empty($stubs)) {
-            $optionAll = trans('extensions::commands.option_all');
-            $choices = array_merge([$optionAll], $available);
-            $default = array_values(array_diff(config('extensions.stubs.default') ?: $available, ['extension', 'providers']));
-            $stubs = multiselect(trans('extensions::commands.select_stubs'), $choices, $default, scroll: 10);
-            if (in_array($optionAll, $stubs, true)) {
-                $stubs = $available;
+            // 1) If explicitly specified in config, use that and skip prompts
+            $preselected = config('extensions.stubs.use');
+            if (is_array($preselected) && ! empty($preselected)) {
+                $stubs = $preselected;
+            } else {
+                // 2) If prompting disabled, use configured default (or all)
+                $shouldPrompt = (bool) (config('extensions.stubs.prompt', true));
+                if (! $shouldPrompt) {
+                    $stubs = config('extensions.stubs.default') ?: $available;
+                } else {
+                    // 3) Interactive selection
+                    $optionAll = trans('extensions::commands.option_all');
+                    $choices = array_merge([$optionAll], $available);
+                    $default = array_values(array_diff(config('extensions.stubs.default') ?: $available, ['extension', 'providers']));
+                    $stubs = multiselect(trans('extensions::commands.select_stubs'), $choices, $default, scroll: 10);
+                    if (in_array($optionAll, $stubs, true)) {
+                        $stubs = $available;
+                    }
+                }
             }
         }
 

@@ -1,0 +1,19 @@
+<?php
+
+namespace {{namespace}}\{{name}}\Policies;
+
+use App\Models\User;
+
+class {{name}}Policy
+{
+    public function viewAny(?User $user): bool
+    {
+        return (bool) $user;
+    }
+
+    public function view(?User $user): bool
+    {
+        return (bool) $user;
+    }
+}
+

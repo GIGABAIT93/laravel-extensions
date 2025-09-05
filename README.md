@@ -76,6 +76,14 @@ The package uses a configuration file (`config/extensions.php`) to define settin
 - **Switchable Types**: Types where only one extension of the type can be active;
   enabling one will automatically disable the others.
 
+Stub generation:
+- `extensions.stubs.path`: Root directory with stub templates.
+- `extensions.stubs.default`: Groups included by default when prompting.
+- `extensions.stubs.use`: Optional array of groups to use without prompting.
+- `extensions.stubs.prompt`: When false, uses `default` silently.
+
+Available stub groups include (not exhaustive): `extension`, `providers`, `config`, `events`, `http`, `routes`, `resources`, `console`, `models`, `lang`, `services`, `database`, `listeners`, `jobs`, `notifications`, `policies`, `rules`, `exceptions`.
+
 ---
 
 ### How to Create an Extension
