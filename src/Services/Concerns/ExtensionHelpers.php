@@ -9,7 +9,7 @@ trait ExtensionHelpers
     /**
      * Find the installation directory for a given extension name.
      *
-     * @param  string      $name
+     * @param string $name
      * @return string|null
      */
     protected function findDirByName(string $name): ?string
@@ -20,6 +20,7 @@ trait ExtensionHelpers
                 return $dir;
             }
         }
+
         return null;
     }
 
@@ -68,6 +69,7 @@ trait ExtensionHelpers
                 return true;
             }
         }
+
         return false;
     }
 

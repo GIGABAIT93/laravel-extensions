@@ -10,3 +10,9 @@ LICENSE export-ignore
 .github/ export-ignore
 .git/ export-ignore
 .vscode/ export-ignore
+phpstan.neon.dist export-ignore
+phpstan-bootstrap.php export-ignore
+.php-cs-fixer.dist.php export-ignore
+.phpstan/ export-ignore
+composer.lock export-ignore
+tests/ export-ignore

@@ -3,6 +3,7 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Gigabait93\Extensions\Facades\Extensions;
+
 use function Laravel\Prompts\table;
 
 class ListCommand extends AbstractCommand
@@ -18,7 +19,7 @@ class ListCommand extends AbstractCommand
                 $ext->isActive() ? trans('extensions::commands.status_active') : trans('extensions::commands.status_inactive'),
                 $ext->getType(),
             ];
-        })->toArray();
+        })->values()->toArray();
 
         table([
             trans('extensions::commands.table_name'),

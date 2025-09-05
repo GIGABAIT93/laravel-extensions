@@ -5,13 +5,15 @@ namespace Gigabait93\Extensions\Actions;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
+/**
+ * Generate files from stub templates for a given extension.
+ */
 class GenerateStubsAction
 {
     public function __construct(
         protected Filesystem $files,
         protected string     $stubRoot
-    )
-    {
+    ) {
     }
 
     /**

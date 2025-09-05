@@ -4,6 +4,9 @@ namespace Gigabait93\Extensions\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @method static static updateOrCreate(array $attributes, array $values = [])
+ */
 class ExtensionStatus extends Model
 {
     protected $table = 'extensions';
@@ -13,7 +16,7 @@ class ExtensionStatus extends Model
     protected $primaryKey = 'name';
     public $incrementing = false;
     protected $keyType = 'string';
-    
+
     protected $fillable = [
         'name',
         'enabled',

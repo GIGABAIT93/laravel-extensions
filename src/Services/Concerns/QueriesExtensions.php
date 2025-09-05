@@ -5,6 +5,9 @@ namespace Gigabait93\Extensions\Services\Concerns;
 use Gigabait93\Extensions\Entities\Extension;
 use Illuminate\Support\Collection;
 
+/**
+ * Query helpers to fetch, filter and cache extensions.
+ */
 trait QueriesExtensions
 {
     /**
@@ -49,13 +52,13 @@ trait QueriesExtensions
                 'type'          => $type,
                 'active'        => $active,
                 'path'          => $dir,
-                'migrationPath' => $this->fs->isDirectory($migDir)  && $this->hasPhp($migDir)  ? $migDir  : null,
+                'migrationPath' => $this->fs->isDirectory($migDir)  && $this->hasPhp($migDir) ? $migDir : null,
                 'seederPath'    => $this->fs->isDirectory($seedDir) && $this->hasPhp($seedDir) ? $seedDir : null,
             ]);
         }
 
         $this->cache = collect($items)
-            ->map(fn(array $m) => new Extension($m, $this));
+            ->map(fn (array $m) => new Extension($m, $this));
 
         return $this->cache;
     }
@@ -71,7 +74,7 @@ trait QueriesExtensions
     /**
      * Return only active extensions.
      *
-     * @param  string|null  $type
+     * @param string|null $type
      * @return Collection<string, Extension>
      */
     public function active(?string $type = null): Collection
@@ -107,7 +110,7 @@ trait QueriesExtensions
      */
     public function getByType(string $type): Collection
     {
-        return $this->filterExtensions(fn(Extension $e) => $e->getType() === strtolower($type));
+        return $this->filterExtensions(fn (Extension $e) => $e->getType() === strtolower($type));
     }
 
     /**
@@ -117,7 +120,7 @@ trait QueriesExtensions
      */
     public function getByPath(string $path): Collection
     {
-        return $this->filterExtensions(fn(Extension $e) => $e->getPath() === $path);
+        return $this->filterExtensions(fn (Extension $e) => $e->getPath() === $path);
     }
 
     /**
@@ -127,7 +130,7 @@ trait QueriesExtensions
      */
     public function getByNamespace(string $namespace): Collection
     {
-        return $this->filterExtensions(fn(Extension $e) => $e->getNamespace() === $namespace);
+        return $this->filterExtensions(fn (Extension $e) => $e->getNamespace() === $namespace);
     }
 
     /**
@@ -137,7 +140,7 @@ trait QueriesExtensions
      */
     public function getByClass(string $class): Collection
     {
-        return $this->filterExtensions(fn(Extension $e) => method_exists($e, 'getClass') && $e->getClass() === $class);
+        return $this->filterExtensions(fn (Extension $e) => method_exists($e, 'getClass') && $e->getClass() === $class);
     }
 
     /**
@@ -147,6 +150,6 @@ trait QueriesExtensions
      */
     public function getByTypeAndName(string $type, string $name): Collection
     {
-        return $this->filterExtensions(fn(Extension $e) => $e->getType() === strtolower($type) && $e->getName() === $name);
+        return $this->filterExtensions(fn (Extension $e) => $e->getType() === strtolower($type) && $e->getName() === $name);
     }
 }

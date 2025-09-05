@@ -3,17 +3,16 @@
 namespace Gigabait93\Extensions\Providers;
 
 use Gigabait93\Extensions\Contracts\ActivatorInterface;
+use Gigabait93\Extensions\Entities\Extension;
 use Gigabait93\Extensions\Facades\Extensions;
 use Gigabait93\Extensions\Services\ExtensionBuilder;
 use Gigabait93\Extensions\Services\ExtensionsService;
-use Gigabait93\Extensions\Entities\Extension;
 use Illuminate\Console\Events\CommandFinished;
-use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Console\Scheduling\Schedule;
 
 class ExtensionsServiceProvider extends ServiceProvider
 {
@@ -23,7 +22,7 @@ class ExtensionsServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../../config/extensions.php', 'extensions');
 
         // Activator
-        $this->app->bind(ActivatorInterface::class, fn($app) => $app->make($app['config']->get('extensions.activator')));
+        $this->app->bind(ActivatorInterface::class, fn ($app) => $app->make($app['config']->get('extensions.activator')));
 
         // ExtensionsService
         $this->app->singleton(ExtensionsService::class, function ($app) {
@@ -63,11 +62,12 @@ class ExtensionsServiceProvider extends ServiceProvider
         // Hard order loading active extensions
         $extensions = $this->app->make(ExtensionsService::class)
             ->all()
-            ->filter(fn(Extension $e) => $e->isActive());
+            ->filter(fn (Extension $e) => $e->isActive());
 
         $order = $this->app['config']->get('extensions.load_order', []);
         $sorted = $extensions->sortBy(function (Extension $e) use ($order) {
             $pos = array_search($e->getName(), $order, true);
+
             return $pos === false ? PHP_INT_MAX : $pos;
         });
 
@@ -79,13 +79,15 @@ class ExtensionsServiceProvider extends ServiceProvider
 
         Event::listen(CommandFinished::class, function (CommandFinished $event) {
             static $ran = false;
-            if ($ran || $event->input->getFirstArgument() !== 'migrate') return;
+            if ($ran || $event->input->getFirstArgument() !== 'migrate') {
+                return;
+            }
             $ran = true;
-            $extensions = Extensions::all()->filter(fn(Extension $e) => $e->isProtected());
+            $extensions = Extensions::all()->filter(fn (Extension $e) => $e->isProtected());
             foreach ($extensions as $extension) {
                 $extension->install();
                 $extension->enable();
-                \Log::info("Protected extension '{$extension->getName()}' installed and enabled.");
+                Log::info("Protected extension '{$extension->getName()}' installed and enabled.");
             }
         });
 

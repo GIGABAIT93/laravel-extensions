@@ -5,16 +5,28 @@ namespace Gigabait93\Extensions\Activators;
 use Gigabait93\Extensions\Contracts\ActivatorInterface;
 use Illuminate\Support\Facades\File;
 
+/**
+ * JSON file-based implementation of ActivatorInterface.
+ */
 class FileActivator implements ActivatorInterface
 {
+    /**
+     * Path to JSON file storing activation statuses.
+     */
     protected string $jsonFile;
 
+    /**
+     * Resolve storage path from configuration.
+     */
     public function __construct()
     {
         $config = config('extensions');
         $this->jsonFile = $config['json_file'] ?? base_path('storage/extensions.json');
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getStatuses(): array
     {
         if (! File::exists($this->jsonFile)) {
@@ -22,14 +34,19 @@ class FileActivator implements ActivatorInterface
         }
 
         $data = json_decode(File::get($this->jsonFile), true);
+
         return is_array($data) ? $data : [];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function setStatus(string $extension, bool $status): bool
     {
         $statuses = $this->getStatuses();
         $statuses[$extension] = $status;
         File::ensureDirectoryExists(dirname($this->jsonFile));
+
         return File::put($this->jsonFile, json_encode($statuses, JSON_PRETTY_PRINT)) !== false;
     }
 }

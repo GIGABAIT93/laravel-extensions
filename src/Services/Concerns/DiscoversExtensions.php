@@ -2,6 +2,9 @@
 
 namespace Gigabait93\Extensions\Services\Concerns;
 
+/**
+ * Discovery helpers: scan configured paths to register new extensions.
+ */
 trait DiscoversExtensions
 {
     /**

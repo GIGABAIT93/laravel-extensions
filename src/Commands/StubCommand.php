@@ -4,10 +4,14 @@ namespace Gigabait93\Extensions\Commands;
 
 use Gigabait93\Extensions\Actions\AddStubsAction;
 use Gigabait93\Extensions\Actions\GenerateStubsAction;
-use Illuminate\Support\Str;
 use Gigabait93\Extensions\Commands\Concerns\HandlesStubs;
+use Illuminate\Support\Str;
+
 use function Laravel\Prompts\select;
 
+/**
+ * Command: generate additional stub groups for an existing extension.
+ */
 class StubCommand extends AbstractCommand
 {
     use HandlesStubs;
@@ -15,6 +19,9 @@ class StubCommand extends AbstractCommand
     protected $signature = 'extension:stub {name?} {path?} {--stub=* : Stub groups to generate}';
     protected $description = 'Generate additional stubs for an existing extension';
 
+    /**
+     * Execute the console command.
+     */
     public function handle(): void
     {
         $basePath = $this->selectBasePath($this->argument('path'));
@@ -22,18 +29,20 @@ class StubCommand extends AbstractCommand
             return;
         }
 
-        $extensions = array_map(fn($p) => basename($p), $this->files->directories($basePath));
+        $extensions = array_map(fn ($p) => basename($p), $this->files->directories($basePath));
 
         $name = $this->argument('name');
         if (! ($name && in_array($name, $extensions, true))) {
             if (empty($extensions)) {
                 $this->error(trans('extensions::commands.no_extensions_found_in_path'));
+
                 return;
             }
             $name = select(trans('extensions::commands.select_extension'), $extensions);
         }
         if (! $name) {
             $this->error(trans('extensions::commands.extension_name_required'));
+
             return;
         }
         $name = Str::studly($name);
@@ -49,6 +58,7 @@ class StubCommand extends AbstractCommand
             $action->execute($name, $basePath, $type, $stubs);
         } catch (\RuntimeException $e) {
             $this->error($e->getMessage());
+
             return;
         }
 

@@ -1,5 +1,8 @@
 ### Laravel Extensions
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/gigabait93/laravel-extensions.svg?style=flat-square)](https://packagist.org/packages/gigabait93/laravel-extensions)
+[![Total Downloads](https://img.shields.io/packagist/dt/gigabait93/laravel-extensions.svg?style=flat-square)](https://packagist.org/packages/gigabait93/laravel-extensions)
+
 This package provides a framework for managing extensions in a Laravel application. It includes services, commands, and
 activators to handle extensions effectively.
 Full documentation: [English](docs/en/introduction.md) | [Українська](docs/uk/introduction.md)

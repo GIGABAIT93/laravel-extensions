@@ -8,6 +8,9 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use RuntimeException;
 
+/**
+ * Fluent builder to scaffold extensions programmatically (e.g. from a UI).
+ */
 class ExtensionBuilder
 {
     protected ?string $name = null;
@@ -144,6 +147,7 @@ class ExtensionBuilder
         if (! $this->files->isDirectory($basePath)) {
             throw new RuntimeException(trans('extensions::commands.base_path_required'));
         }
+
         return $basePath;
     }
 
@@ -154,6 +158,7 @@ class ExtensionBuilder
         if (! $this->files->isDirectory($stubRoot)) {
             throw new RuntimeException(trans('extensions::commands.stubs_path_required'));
         }
+
         return $stubRoot;
     }
 }

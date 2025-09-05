@@ -5,13 +5,16 @@ namespace Gigabait93\Extensions\Services\Concerns;
 use Gigabait93\Extensions\Entities\Extension;
 use Illuminate\Support\Facades\Artisan;
 
+/**
+ * Management helpers for install/enable/disable/delete operations.
+ */
 trait ManagesExtensions
 {
     /**
      * Install an extension: run migrations and seeders.
      *
-     * @param  string $name
-     * @param  bool   $force
+     * @param string $name
+     * @param bool $force
      * @return string Result message
      */
     public function install(string $name, bool $force = false): string
@@ -36,6 +39,7 @@ trait ManagesExtensions
 
         $this->callExtensionEvent($ext, 'onInstall');
         $this->invalidateCache();
+
         return trans('extensions::messages.extension_installed', compact('name'));
     }
 
@@ -67,6 +71,7 @@ trait ManagesExtensions
         if ($ok && $ext) {
             $this->callExtensionEvent($ext, 'onEnable');
         }
+
         return $ok
             ? trans('extensions::messages.extension_enabled')
             : trans('extensions::messages.enable_failed');
@@ -86,6 +91,7 @@ trait ManagesExtensions
         if ($ok && $ext) {
             $this->callExtensionEvent($ext, 'onDisable');
         }
+
         return $ok
             ? trans('extensions::messages.extension_disabled')
             : trans('extensions::messages.disable_failed');
@@ -114,6 +120,7 @@ trait ManagesExtensions
         }
 
         $this->invalidateCache();
+
         return $deleted
             ? trans('extensions::messages.extension_deleted', compact('name'))
             : trans('extensions::messages.extension_not_found', compact('name'));

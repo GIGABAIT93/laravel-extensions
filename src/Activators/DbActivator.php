@@ -11,7 +11,7 @@ class DbActivator implements ActivatorInterface
     {
         return ExtensionStatus::all()
             ->pluck('enabled', 'name')
-            ->map(fn($v) => (bool) $v)
+            ->map(fn ($v) => (bool) $v)
             ->toArray();
     }
 
@@ -21,6 +21,7 @@ class DbActivator implements ActivatorInterface
             ['name' => $extension],
             ['enabled' => $status]
         );
+
         return (bool) $model;
     }
 }

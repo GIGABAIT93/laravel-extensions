@@ -1,0 +1,10 @@
+parameters:
+  level: 5
+  paths:
+    - src
+  tmpDir: .phpstan
+  reportUnmatchedIgnoredErrors: true
+  scanDirectories:
+    - vendor
+  bootstrapFiles:
+    - phpstan-bootstrap.php

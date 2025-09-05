@@ -3,6 +3,7 @@
 namespace Gigabait93\Extensions\Commands;
 
 use Gigabait93\Extensions\Facades\Extensions;
+
 use function Laravel\Prompts\select;
 
 class MigrateCommand extends AbstractCommand
@@ -22,25 +23,27 @@ class MigrateCommand extends AbstractCommand
         $list = Extensions::all();
 
         if ($name and !$all) {
-            $list = $list->filter(fn($e) => $e->getName() === $name);
+            $list = $list->filter(fn ($e) => $e->getName() === $name);
         } elseif ($this->input->isInteractive() and !$all) {
-            $choices = $list->map(fn($e) => $e->getName())->toArray();
+            $choices = $list->map(fn ($e) => $e->getName())->toArray();
             $allLabel = trans('extensions::commands.option_all');
             $choices['all'] = $allLabel;
 
+            $default = (array_values($choices)[0] ?? null);
             $choice = select(
                 trans('extensions::commands.select_extension_migrate'),
                 $choices,
-                $choices[0] ?? null
+                $default
             );
 
             if ($choice !== 'all') {
-                $list = $list->filter(fn($e) => $e->getName() === $choice);
+                $list = $list->filter(fn ($e) => $e->getName() === $choice);
             }
         }
 
         if ($list->isEmpty()) {
             $this->warn(trans('extensions::commands.no_extensions_to_process'));
+
             return;
         }
 

@@ -3,14 +3,22 @@
 namespace Gigabait93\Extensions\Commands\Concerns;
 
 use Illuminate\Support\Str;
+
 use function Laravel\Prompts\{multiselect, select};
 
+/**
+ * Helpers for prompting and resolving stub groups and base paths.
+ */
 trait HandlesStubs
 {
+    /**
+     * Resolve base path interactively if not provided or invalid.
+     */
     protected function selectBasePath(?string $path): ?string
     {
         if (empty($this->bases)) {
             $this->error(trans('extensions::commands.paths_required'));
+
             return null;
         }
 
@@ -21,12 +29,18 @@ trait HandlesStubs
 
         if (! $path) {
             $this->error(trans('extensions::commands.base_path_required'));
+
             return null;
         }
 
         return $path;
     }
 
+    /**
+     * Discover available stub groups under the given root.
+     *
+     * @return string[]
+     */
     protected function availableStubs(string $stubRoot): array
     {
         $groups = [];
@@ -38,9 +52,16 @@ trait HandlesStubs
             $groups[] = Str::lower($group);
         }
         $groups = array_values(array_unique($groups));
+
         return array_values(array_diff($groups, ['extension', 'providers']));
     }
 
+    /**
+     * Determine which stub groups to use, honoring CLI options and config.
+     *
+     * @param string[] $available
+     * @return string[]
+     */
     protected function resolveStubs(array $available): array
     {
         $stubs = $this->option('stub');
@@ -68,6 +89,7 @@ trait HandlesStubs
         }
 
         $stubs = array_map('strtolower', $stubs);
+
         return array_values(array_unique(array_merge($stubs, ['extension', 'providers'])));
     }
 }
