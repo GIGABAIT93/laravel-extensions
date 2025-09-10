@@ -14,6 +14,9 @@ use Gigabait93\Extensions\Console\Commands\MakeCommand;
 use Gigabait93\Extensions\Console\Commands\MigrateCommand;
 use Gigabait93\Extensions\Console\Commands\PublishCommand;
 use Gigabait93\Extensions\Console\Commands\ReloadCommand;
+use Gigabait93\Extensions\Console\Commands\SearchCommand;
+use Gigabait93\Extensions\Console\Commands\StatsCommand;
+use Gigabait93\Extensions\Console\Commands\BulkCommand;
 use Gigabait93\Extensions\Contracts\ActivatorContract;
 use Gigabait93\Extensions\Services\AutoloadService;
 use Gigabait93\Extensions\Services\BootstrapService;
@@ -126,6 +129,9 @@ class ExtensionsServiceProvider extends ServiceProvider
             PublishCommand::class,
             DeleteCommand::class,
             MigrateCommand::class,
+            StatsCommand::class,
+            SearchCommand::class,
+            BulkCommand::class,
         ]);
     }
 }

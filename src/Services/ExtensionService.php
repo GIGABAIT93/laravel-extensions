@@ -34,6 +34,10 @@ class ExtensionService
 
     private array $cachedSwitchTypes = [];
 
+    private ?Collection $cachedStats = null;
+
+    private ?int $cachedTotalSize = null;
+
     public function __construct(
         private ActivatorContract $activator,
         private RegistryService $registry,
@@ -64,6 +68,8 @@ class ExtensionService
         $this->cachedExtensions = [];
         $this->cachedProtected = [];
         $this->cachedSwitchTypes = [];
+        $this->cachedStats = null;
+        $this->cachedTotalSize = null;
         $this->registry->clearCache();
     }
 
@@ -441,6 +447,110 @@ class ExtensionService
         }
 
         return $result;
+    }
+
+    /** Get extensions statistics */
+    public function getStats(): array
+    {
+        $extensions = $this->all();
+        
+        return [
+            'total' => $extensions->count(),
+            'enabled' => $extensions->filter->isEnabled()->count(),
+            'disabled' => $extensions->reject->isEnabled()->count(),
+            'broken' => $extensions->filter->isBroken()->count(),
+            'protected' => $extensions->filter(fn($e) => $e->isProtected())->count(),
+            'with_dependencies' => $extensions->filter->hasDependencies()->count(),
+            'by_type' => $extensions->groupBy('type')->map->count()->toArray(),
+        ];
+    }
+
+    /** Bulk operations */
+    public function enableMultiple(array $ids): array
+    {
+        $results = [];
+        foreach ($ids as $id) {
+            $results[$id] = $this->enable($id);
+        }
+        return $results;
+    }
+
+    public function disableMultiple(array $ids): array
+    {
+        $results = [];
+        foreach ($ids as $id) {
+            $results[$id] = $this->disable($id);
+        }
+        return $results;
+    }
+
+    /** Get extensions with issues */
+    public function getBroken(): Collection
+    {
+        return $this->all()->filter->isBroken();
+    }
+
+    public function getWithMissingDependencies(): Collection
+    {
+        return $this->all()->filter(function ($extension) {
+            return !empty($extension->missingPackages()) || !empty($extension->missingExtensions());
+        });
+    }
+
+    /** Search and filter methods */
+    public function search(string $query): Collection
+    {
+        $query = strtolower($query);
+        return $this->all()->filter(function ($extension) use ($query) {
+            return str_contains(strtolower($extension->name), $query) ||
+                   str_contains(strtolower($extension->id), $query) ||
+                   str_contains(strtolower($extension->description), $query) ||
+                   str_contains(strtolower($extension->author), $query);
+        });
+    }
+
+    public function findByAuthor(string $author): Collection
+    {
+        return $this->all()->filter(function ($extension) use ($author) {
+            return strtolower($extension->author) === strtolower($author);
+        });
+    }
+
+    /** Get extensions that can be safely enabled */
+    public function getReadyToEnable(): Collection
+    {
+        return $this->all()->filter->canEnable();
+    }
+
+    /** Check if extension can be updated (has newer version available) */
+    public function checkUpdates(): array
+    {
+        // This would require external version checking - placeholder for now
+        return [];
+    }
+
+    /** Get total size of all extensions */
+    public function getTotalSize(): int
+    {
+        if ($this->cachedTotalSize !== null) {
+            return $this->cachedTotalSize;
+        }
+
+        $this->cachedTotalSize = $this->all()->sum(function ($extension) {
+            return $extension->getSize();
+        });
+
+        return $this->cachedTotalSize;
+    }
+
+    /** Get extensions sorted by size */
+    public function getBySize(bool $desc = true): Collection
+    {
+        $sorted = $this->all()->sortBy(function ($extension) {
+            return $extension->getSize();
+        });
+
+        return $desc ? $sorted->reverse()->values() : $sorted->values();
     }
 
     public function getOperationsSummary(): array

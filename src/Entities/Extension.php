@@ -376,4 +376,100 @@ final class Extension
             ],
         ]);
     }
+
+    public function getDisplayName(): string
+    {
+        return $this->name . ' (' . $this->id . ')';
+    }
+
+    public function getFullPath(): string
+    {
+        return realpath($this->path) ?: $this->path;
+    }
+
+    public function exists(): bool
+    {
+        return is_dir($this->path);
+    }
+
+    public function hasProviderFile(): bool
+    {
+        if (empty($this->provider)) {
+            return false;
+        }
+        
+        // Convert namespace to path
+        $providerPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $this->provider) . '.php';
+        $fullPath = $this->path . DIRECTORY_SEPARATOR . $providerPath;
+        
+        return file_exists($fullPath);
+    }
+
+    public function getSize(): int
+    {
+        if (!$this->exists()) {
+            return 0;
+        }
+        
+        $size = 0;
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($this->path, \FilesystemIterator::SKIP_DOTS)
+        );
+        
+        foreach ($iterator as $file) {
+            $size += $file->getSize();
+        }
+        
+        return $size;
+    }
+
+    public function getFormattedSize(): string
+    {
+        $bytes = $this->getSize();
+        $units = ['B', 'KB', 'MB', 'GB'];
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    public function hasReadme(): bool
+    {
+        $readmeFiles = ['README.md', 'readme.md', 'README.txt', 'readme.txt'];
+        foreach ($readmeFiles as $file) {
+            if (file_exists($this->path . DIRECTORY_SEPARATOR . $file)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function getReadmeContent(): ?string
+    {
+        $readmeFiles = ['README.md', 'readme.md', 'README.txt', 'readme.txt'];
+        foreach ($readmeFiles as $file) {
+            $path = $this->path . DIRECTORY_SEPARATOR . $file;
+            if (file_exists($path)) {
+                return file_get_contents($path) ?: null;
+            }
+        }
+        return null;
+    }
+
+    public function compareVersion(string $version): int
+    {
+        return version_compare($this->version, $version);
+    }
+
+    public function isNewerThan(string $version): bool
+    {
+        return $this->compareVersion($version) > 0;
+    }
+
+    public function isOlderThan(string $version): bool
+    {
+        return $this->compareVersion($version) < 0;
+    }
 }
