@@ -378,10 +378,49 @@ class ExtensionService
         }
     }
 
-    /** Install dependencies without enabling extension */
+    /** Install dependencies and run migrations without enabling extension */
     public function install(string $id): OpResult
     {
-        return $this->installDependencies($id);
+        try {
+            $manifest = $this->registry->find($id);
+            if (!$manifest) {
+                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
+            }
+
+            // Check for missing extension dependencies (unlike enable, install doesn't auto-install them)
+            $missingExt = $this->getMissingExtensions($manifest);
+            if (!empty($missingExt)) {
+                return OpResult::failure(
+                    __('extensions::lang.missing_extensions', ['extensions' => implode(', ', $missingExt)]),
+                    'missing_extensions',
+                    ['extensions' => array_values($missingExt)]
+                );
+            }
+
+            // Install composer dependencies
+            $dependenciesResult = $this->installDependencies($id);
+            if ($dependenciesResult->isFailure()) {
+                return $dependenciesResult;
+            }
+
+            // Run migrations
+            $migrationsRun = $this->migrator->migrate($manifest);
+            
+            $data = $dependenciesResult->data;
+            $data['migrations_run'] = $migrationsRun;
+
+            if ($migrationsRun) {
+                Log::info('Extension installed successfully (dependencies + migrations)', ['id' => $id]);
+                return OpResult::success(__('extensions::lang.extension_installed_with_migrations'), $data);
+            } else {
+                Log::info('Extension installed (dependencies only, no migrations needed)', ['id' => $id]);
+                return OpResult::success(__('extensions::lang.extension_installed_deps_only'), $data);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Extension install failed', ['id' => $id, 'error' => $e->getMessage()]);
+            
+            return OpResult::failure(__('extensions::lang.install_failed', ['error' => $e->getMessage()]), 'exception');
+        }
     }
 
     /** Install dependencies then enable extension */

@@ -205,6 +205,34 @@ class ExtensionServiceTest extends TestCase
         $this->assertFalse($service->get('addon')?->isEnabled());
     }
 
+    public function test_install_installs_dependencies_and_runs_migrations(): void
+    {
+        $service = $this->app->make(ExtensionService::class);
+        $res = $service->install('sample');
+
+        $this->assertTrue($res->isSuccess());
+        $this->assertFalse($service->get('sample')?->isEnabled()); // Should NOT be enabled
+        $this->assertArrayHasKey('migrations_run', $res->data);
+    }
+
+    public function test_install_fails_with_missing_extension(): void
+    {
+        $service = $this->app->make(ExtensionService::class);
+        $res = $service->install('nonexistent');
+
+        $this->assertFalse($res->isSuccess());
+        $this->assertSame('not_found', $res->errorCode);
+    }
+
+    public function test_install_propagates_dependency_failure(): void
+    {
+        $service = $this->app->make(ExtensionService::class);
+        $res = $service->install('addon'); // addon has missing extension dependencies
+
+        $this->assertFalse($res->isSuccess());
+        $this->assertSame('missing_extensions', $res->errorCode);
+    }
+
     public function test_protected_switch_extension_can_disable_but_not_delete(): void
     {
         config(['extensions.protected' => ['Themes' => 'Alpha']]);
