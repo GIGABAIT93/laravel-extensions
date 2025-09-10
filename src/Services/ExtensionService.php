@@ -15,6 +15,7 @@ use Gigabait93\Extensions\Jobs\ExtensionEnableJob;
 use Gigabait93\Extensions\Jobs\ExtensionInstallDepsJob;
 use Gigabait93\Extensions\Support\ManifestValue;
 use Gigabait93\Extensions\Support\OpResult;
+use Gigabait93\Extensions\Support\ValidationWrapper;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +25,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ExtensionService
 {
+    use ValidationWrapper;
+
     private ?array $cachedStatuses = null;
 
     private ?Collection $cachedManifests = null;
@@ -861,61 +864,52 @@ class ExtensionService
 
     public function validateCanEnable(string $id): OpResult
     {
-        $validationResult = $this->validateExtensionExists($id);
-        if ($validationResult->isFailure()) {
-            return $validationResult;
-        }
+        return $this->wrapValidation($id, function ($id) {
+            if ($this->activator->isEnabled($id)) {
+                return OpResult::failure(__('extensions::lang.extension_already_enabled'), 'already_enabled');
+            }
 
-        if ($this->activator->isEnabled($id)) {
-            return OpResult::failure(__('extensions::lang.extension_already_enabled'), 'already_enabled');
-        }
-
-        // Dependencies validation is now handled in performInstallation()
-        // This method only checks basic enable prerequisites
-        return OpResult::success('Extension can be enabled');
+            // Dependencies validation is now handled in performInstallation()
+            // This method only checks basic enable prerequisites
+            return OpResult::success('Extension can be enabled');
+        });
     }
 
     public function validateCanDisable(string $id): OpResult
     {
-        $validationResult = $this->validateExtensionExists($id);
-        if ($validationResult->isFailure()) {
-            return $validationResult;
-        }
+        return $this->wrapValidation($id, function ($id) {
+            if (!$this->activator->isEnabled($id)) {
+                return OpResult::failure(__('extensions::lang.extension_already_disabled'), 'already_disabled');
+            }
 
-        if (!$this->activator->isEnabled($id)) {
-            return OpResult::failure(__('extensions::lang.extension_already_disabled'), 'already_disabled');
-        }
+            $manifest = $this->registry->find($id);
+            if ($this->isProtectedManifest($manifest) && !$this->isSwitchTypeManifest($manifest)) {
+                return OpResult::failure(__('extensions::lang.extension_protected_disable'), 'protected');
+            }
 
-        $manifest = $this->registry->find($id);
-        if ($this->isProtectedManifest($manifest) && !$this->isSwitchTypeManifest($manifest)) {
-            return OpResult::failure(__('extensions::lang.extension_protected_disable'), 'protected');
-        }
+            $requiredBy = $this->getRequiredByEnabled($id);
+            if (!empty($requiredBy)) {
+                return OpResult::failure(
+                    __('extensions::lang.extension_required_by', ['extensions' => implode(', ', $requiredBy)]),
+                    'required_by',
+                    ['required_by' => $requiredBy]
+                );
+            }
 
-        $requiredBy = $this->getRequiredByEnabled($id);
-        if (!empty($requiredBy)) {
-            return OpResult::failure(
-                __('extensions::lang.extension_required_by', ['extensions' => implode(', ', $requiredBy)]),
-                'required_by',
-                ['required_by' => $requiredBy]
-            );
-        }
-
-        return OpResult::success('Extension can be disabled');
+            return OpResult::success('Extension can be disabled');
+        });
     }
 
     public function validateCanDelete(string $id): OpResult
     {
-        $validationResult = $this->validateExtensionExists($id);
-        if ($validationResult->isFailure()) {
-            return $validationResult;
-        }
+        return $this->wrapValidation($id, function ($id) {
+            $manifest = $this->registry->find($id);
+            if ($this->isProtectedManifest($manifest)) {
+                return OpResult::failure(__('extensions::lang.extension_protected_delete'), 'protected');
+            }
 
-        $manifest = $this->registry->find($id);
-        if ($this->isProtectedManifest($manifest)) {
-            return OpResult::failure(__('extensions::lang.extension_protected_delete'), 'protected');
-        }
-
-        return OpResult::success('Extension can be deleted');
+            return OpResult::success('Extension can be deleted');
+        });
     }
 
     private function isProtectedManifest(ManifestValue $manifest): bool

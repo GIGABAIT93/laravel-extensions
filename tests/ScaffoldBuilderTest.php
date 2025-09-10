@@ -83,4 +83,33 @@ class ScaffoldBuilderTest extends TestCase
             File::deleteDirectory($tmp);
         }
     }
+
+    public function test_get_available_types(): void
+    {
+        $types = ExtensionBuilder::getAvailableTypes();
+        $this->assertIsArray($types);
+        $this->assertContains('Modules', $types);
+        $this->assertContains('Themes', $types);
+        $this->assertCount(2, $types);
+    }
+
+    public function test_get_available_stub_groups(): void
+    {
+        $stubsPath = dirname(__DIR__) . '/stubs/Extension';
+        $groups = ExtensionBuilder::getAvailableStubGroups($stubsPath);
+
+        $this->assertIsArray($groups);
+        $this->assertContains('extension', $groups);
+        $this->assertContains('composer', $groups);
+        $this->assertContains('providers', $groups);
+    }
+
+    public function test_get_available_stub_groups_with_invalid_path(): void
+    {
+        $invalidPath = '/path/that/does/not/exist';
+        $groups = ExtensionBuilder::getAvailableStubGroups($invalidPath);
+
+        $this->assertIsArray($groups);
+        $this->assertEmpty($groups);
+    }
 }

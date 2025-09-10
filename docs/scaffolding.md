@@ -17,16 +17,23 @@ Use the `ExtensionBuilder` to generate extensions programmatically:
 ```php
 use Gigabait93\Extensions\Scaffolding\ExtensionBuilder;
 
-$builder = ExtensionBuilder::make()
+// Get available extension types and stub groups
+$availableTypes = ExtensionBuilder::getAvailableTypes();
+$availableGroups = ExtensionBuilder::getAvailableStubGroups();
+
+// Build extension
+$builder = app(ExtensionBuilder::class);
+$result = $builder
     ->withType('Modules')
     ->withName('Blog')
     ->withBasePath(base_path('extensions'))
+    ->withGroups(['providers', 'config', 'routes'])
     ->build();
 
 // Check result
-if ($builder->isSuccess()) {
-    echo "Extension created successfully!";
-}
+echo "Extension created at: " . $result['path'];
+echo "Namespace: " . $result['namespace'];
+echo "Files created: " . count($result['files']);
 ```
 
 ### 🎨 Template Variables

@@ -234,4 +234,29 @@ class ExtensionBuilder
 
         return $type;
     }
+
+    /**
+     * Get all available extension types from the registry.
+     *
+     * @return string[]
+     */
+    public static function getAvailableTypes(): array
+    {
+        $registry = app(RegistryService::class);
+
+        return $registry->types();
+    }
+
+    /**
+     * Get all available stub groups from the default stubs path.
+     *
+     * @param string|null $stubsPath Optional custom stubs path
+     * @return string[]
+     */
+    public static function getAvailableStubGroups(?string $stubsPath = null): array
+    {
+        $path = $stubsPath ?? ScaffoldConfig::stubsPath();
+
+        return StubGroups::scan($path);
+    }
 }

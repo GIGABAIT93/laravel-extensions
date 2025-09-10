@@ -7,6 +7,7 @@ namespace Gigabait93\Extensions\Entities;
 use Gigabait93\Extensions\Facades\Extensions as ExtensionsFacade;
 use Gigabait93\Extensions\Support\ManifestValue;
 use Gigabait93\Extensions\Support\OpResult;
+use Gigabait93\Extensions\Support\PathResolver;
 
 /**
  * Extension entity that exposes all manifest fields as real, typed, read-only properties.
@@ -398,11 +399,7 @@ final class Extension
             return false;
         }
 
-        // Convert namespace to path
-        $providerPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $this->provider) . '.php';
-        $fullPath = $this->path . DIRECTORY_SEPARATOR . $providerPath;
-
-        return file_exists($fullPath);
+        return PathResolver::hasProviderFile($this->path, $this->provider);
     }
 
     public function getSize(): int
@@ -437,27 +434,17 @@ final class Extension
 
     public function hasReadme(): bool
     {
-        $readmeFiles = ['README.md', 'readme.md', 'README.txt', 'readme.txt'];
-        foreach ($readmeFiles as $file) {
-            if (file_exists($this->path . DIRECTORY_SEPARATOR . $file)) {
-                return true;
-            }
-        }
-
-        return false;
+        return PathResolver::findReadmePath($this->path) !== null;
     }
 
     public function getReadmeContent(): ?string
     {
-        $readmeFiles = ['README.md', 'readme.md', 'README.txt', 'readme.txt'];
-        foreach ($readmeFiles as $file) {
-            $path = $this->path . DIRECTORY_SEPARATOR . $file;
-            if (file_exists($path)) {
-                return file_get_contents($path) ?: null;
-            }
+        $readmePath = PathResolver::findReadmePath($this->path);
+        if ($readmePath === null) {
+            return null;
         }
 
-        return null;
+        return file_get_contents($readmePath) ?: null;
     }
 
     public function compareVersion(string $version): int

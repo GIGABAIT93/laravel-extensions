@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gigabait93\Extensions\Services;
 
+use Gigabait93\Extensions\Support\JsonFileReader;
 use Gigabait93\Extensions\Support\ManifestValue;
 use Illuminate\Support\Collection;
 
@@ -78,14 +79,11 @@ class RegistryService
 
     private function readManifest(string $file, ?string $forcedType = null): ?ManifestValue
     {
-        $raw = @file_get_contents($file);
-        if ($raw === false) {
+        $json = JsonFileReader::read($file);
+        if ($json === null) {
             return null;
         }
-        $json = json_decode($raw, true);
-        if (!is_array($json)) {
-            return null;
-        }
+
         $required = ['id', 'name', 'provider'];
         foreach ($required as $k) {
             if (!isset($json[$k]) || !is_string($json[$k]) || $json[$k] === '') {
@@ -98,19 +96,15 @@ class RegistryService
         if ($type === '' && is_string($json['type'] ?? null)) {
             $type = (string) $json['type'];
         }
+
         // Try read extension's composer.json for requires
         $requiresPackages = [];
         $composerPath = $dir . DIRECTORY_SEPARATOR . 'composer.json';
-        if (is_file($composerPath)) {
-            $craw = @file_get_contents($composerPath);
-            if ($craw !== false) {
-                $cjson = json_decode($craw, true);
-                if (is_array($cjson) && isset($cjson['require']) && is_array($cjson['require'])) {
-                    foreach ($cjson['require'] as $pkg => $constraint) {
-                        if (is_string($pkg) && is_string($constraint) && $pkg !== 'php') {
-                            $requiresPackages[$pkg] = $constraint;
-                        }
-                    }
+        $composerData = JsonFileReader::read($composerPath);
+        if ($composerData && isset($composerData['require']) && is_array($composerData['require'])) {
+            foreach ($composerData['require'] as $pkg => $constraint) {
+                if (is_string($pkg) && is_string($constraint) && $pkg !== 'php') {
+                    $requiresPackages[$pkg] = $constraint;
                 }
             }
         }
