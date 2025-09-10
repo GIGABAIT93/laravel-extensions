@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag name (e.g. v1.0.0)'
+        description: 'Tag name (e.g. v2.0.0)'
         required: true
       release_name:
         description: 'Release title'
         required: true
       body:
-        description: 'Release notes'
+        description: 'Release notes (optional - will use CHANGELOG.md if empty)'
         required: false
 
 jobs:
@@ -19,18 +19,55 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          extensions: mbstring, json, dom, curl, sqlite3
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Run tests before release
+        run: |
+          composer install --dev
+          vendor/bin/phpunit
+          vendor/bin/phpstan analyse --no-progress
+          vendor/bin/php-cs-fixer fix --dry-run --using-cache=no
+
       - name: Create tag
         run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git tag ${{ inputs.tag }}
           git push origin ${{ inputs.tag }}
-      - name: Create release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          if [ -z "${{ inputs.body }}" ]; then
+            # Extract changelog for this version from CHANGELOG.md
+            awk '/^## \[${{ inputs.tag }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > release_notes.md
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            cat release_notes.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "body=${{ inputs.body }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
-          release_name: ${{ inputs.release_name }}
-          body: ${{ inputs.body }}
+          name: ${{ inputs.release_name }}
+          body: ${{ steps.changelog.outputs.body }}
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

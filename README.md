@@ -1,5 +1,7 @@
 # Laravel Extensions
 
+[![CI](https://github.com/gigabait93/laravel-extensions/actions/workflows/ci.yml/badge.svg)](https://github.com/gigabait93/laravel-extensions/actions/workflows/ci.yml)
+[![Security](https://github.com/gigabait93/laravel-extensions/actions/workflows/security.yml/badge.svg)](https://github.com/gigabait93/laravel-extensions/actions/workflows/security.yml)
 [![Latest Stable Version](https://img.shields.io/packagist/v/gigabait93/laravel-extensions.svg)](https://packagist.org/packages/gigabait93/laravel-extensions)
 [![Total Downloads](https://img.shields.io/packagist/dt/gigabait93/laravel-extensions.svg)](https://packagist.org/packages/gigabait93/laravel-extensions)
 [![License](https://img.shields.io/packagist/l/gigabait93/laravel-extensions.svg)](https://packagist.org/packages/gigabait93/laravel-extensions)
