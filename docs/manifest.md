@@ -20,7 +20,6 @@ The following fields are supported:
 | `version` | no | Semantic version string. |
 | `compatible_with` | no | Target application version. |
 | `requires_extensions` | no | Array of extension IDs this one depends on. |
-| `requires_packages` | no | Map of Composer packages to version constraints. |
 | `meta` | no | Arbitrary JSON object for custom metadata. |
 
 Example `extension.json`:
@@ -36,9 +35,6 @@ Example `extension.json`:
   "version": "1.0.0",
   "compatible_with": "^12.0",
   "requires_extensions": ["base"],
-  "requires_packages": {
-    "illuminate/support": "^12.0"
-  },
   "meta": {
     "category": "content"
   }

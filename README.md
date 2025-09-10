@@ -97,9 +97,6 @@ extensions/
   "version": "1.0.0",
   "compatible_with": "^12.0",
   "requires_extensions": ["base"],
-  "requires_packages": {
-    "illuminate/support": "^12.0"
-  },
   "meta": {
     "category": "content"
   }
