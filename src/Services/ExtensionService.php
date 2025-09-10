@@ -143,16 +143,7 @@ class ExtensionService
 
     public function findByName(string $name): ?Extension
     {
-        $needle = strtolower($name);
-        $statuses = $this->getStatuses();
-
-        foreach ($this->getAllManifests() as $m) {
-            if (strtolower($m->name) === $needle) {
-                return $this->makeExtension($m, $statuses);
-            }
-        }
-
-        return null;
+        return $this->findExtensionByCriteria(['name' => $name]);
     }
 
     public function find(string $idOrName): ?Extension
@@ -162,22 +153,11 @@ class ExtensionService
 
     public function findByNameAndType(string $name, ?string $type = null): ?Extension
     {
-        $needleName = strtolower($name);
-        $needleType = $type !== null ? strtolower($type) : null;
-        $statuses = $this->getStatuses();
-
-        foreach ($this->getAllManifests() as $m) {
-            if (strtolower($m->name) !== $needleName) {
-                continue;
-            }
-            if ($needleType !== null && strtolower($m->type) !== $needleType) {
-                continue;
-            }
-
-            return $this->makeExtension($m, $statuses);
+        $criteria = ['name' => $name];
+        if ($type !== null) {
+            $criteria['type'] = $type;
         }
-
-        return null;
+        return $this->findExtensionByCriteria($criteria);
     }
 
     public function one(string $idOrName, ?string $type = null): ?Extension
@@ -204,39 +184,13 @@ class ExtensionService
 
     public function enable(string $id): OpResult
     {
-        try {
-            $validation = $this->validateCanEnable($id);
-            if ($validation->isFailure()) {
-                // Handle special case for already enabled
-                if ($validation->errorCode === 'already_enabled') {
-                    return OpResult::success(__('extensions::lang.extension_already_enabled'));
-                }
-                return $validation;
-            }
-
-            $manifest = $this->registry->find($id);
-            // Include bundled vendor first (if any) to reduce false-positive "missing packages"
-            $this->deps->includeExtensionVendor($manifest);
-
-            // Switch types logic: only one active per type
-            $this->enforceSwitchTypesOnEnable($manifest);
-
-            // Persist + bootstrap + migrate
-            $this->activator->enable($id, $manifest->type);
-            $this->clearCache(); // Clear cache after state change
-            $this->bootstrapper->registerProvider($manifest);
-            $this->migrator->migrate($manifest);
-
-            $extension = $this->get($id);
-            ExtensionEnabledEvent::dispatch($extension);
-            Log::info('Extension enabled', ['id' => $id]);
-
-            return OpResult::success(__('extensions::lang.extension_enabled'));
-        } catch (\Throwable $e) {
-            Log::error('Extension enable failed', ['id' => $id, 'error' => $e->getMessage()]);
-
-            return OpResult::failure(__('extensions::lang.enable_failed', ['error' => $e->getMessage()]), 'exception');
+        // Check if already enabled
+        if ($this->activator->isEnabled($id)) {
+            return OpResult::success(__('extensions::lang.extension_already_enabled'));
         }
+
+        // Use centralized installation logic with enable=true, migrations=true
+        return $this->performInstallation($id, true, true);
     }
 
     public function disable(string $id): OpResult
@@ -251,7 +205,11 @@ class ExtensionService
                 return $validation;
             }
 
-            $manifest = $this->registry->find($id);
+            $manifestResult = $this->getManifestOrFail($id);
+            if ($manifestResult instanceof OpResult) {
+                return $manifestResult;
+            }
+            $manifest = $manifestResult;
 
             $extension = $this->get($id);
             $this->activator->disable($id, $manifest->type);
@@ -319,10 +277,11 @@ class ExtensionService
     /** @return string[] list of missing composer packages for the extension */
     public function missingPackages(string $id): array
     {
-        $manifest = $this->registry->find($id);
-        if (!$manifest) {
+        $manifestResult = $this->getManifestOrFail($id);
+        if ($manifestResult instanceof OpResult) {
             return [];
         }
+        $manifest = $manifestResult;
 
         // Try include vendor to account for bundled deps
         $this->deps->includeExtensionVendor($manifest);
@@ -332,114 +291,31 @@ class ExtensionService
 
     public function installDependencies(string $id): OpResult
     {
-        try {
-            $manifest = $this->registry->find($id);
-            if (!$manifest) {
-                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
-            }
-
-            /** @var ComposerService $mergeService */
-            $mergeService = $this->app->make(ComposerService::class);
-
-            // Check if extension has composer.json
-            if (!$mergeService->extensionHasComposerFile($manifest)) {
-                return OpResult::success(__('extensions::lang.extension_no_composer'));
-            }
-
-            $composerData = $mergeService->getExtensionComposerData($manifest);
-            $dependencies = $composerData['require'] ?? [];
-
-            if (empty($dependencies)) {
-                return OpResult::success(__('extensions::lang.extension_no_deps'));
-            }
-
-            // Check if dependencies are missing
-            $missing = $this->deps->missingPackages($manifest);
-            if (empty($missing)) {
-                return OpResult::success(__('extensions::lang.deps_already_installed'));
-            }
-
-            // Use composer install with merge-plugin
-            $success = $mergeService->installDependencies();
-
-            if ($success) {
-                $extension = $this->get($id);
-                ExtensionDepsInstalledEvent::dispatch($extension, ['packages' => $missing, 'method' => 'composer-merge-plugin']);
-                Log::info('Dependencies installed via composer-merge-plugin', ['id' => $id, 'packages' => $missing]);
-
-                return OpResult::success(__('extensions::lang.deps_installed'), ['packages' => $missing]);
-            }
-
-            return OpResult::failure(__('extensions::lang.deps_install_failed_merge'), 'install_failed', ['packages' => $missing]);
-        } catch (\Throwable $e) {
-            Log::error('Dependencies install failed', ['id' => $id, 'error' => $e->getMessage()]);
-
-            return OpResult::failure(__('extensions::lang.deps_install_failed', ['error' => $e->getMessage()]), 'exception');
-        }
+        // Use centralized installation logic with enable=false, migrations=false
+        return $this->performInstallation($id, false, false);
     }
 
     /** Install dependencies and run migrations without enabling extension */
     public function install(string $id): OpResult
     {
-        try {
-            $manifest = $this->registry->find($id);
-            if (!$manifest) {
-                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
-            }
-
-            // Check for missing extension dependencies (unlike enable, install doesn't auto-install them)
-            $missingExt = $this->getMissingExtensions($manifest);
-            if (!empty($missingExt)) {
-                return OpResult::failure(
-                    __('extensions::lang.missing_extensions', ['extensions' => implode(', ', $missingExt)]),
-                    'missing_extensions',
-                    ['extensions' => array_values($missingExt)]
-                );
-            }
-
-            // Install composer dependencies
-            $dependenciesResult = $this->installDependencies($id);
-            if ($dependenciesResult->isFailure()) {
-                return $dependenciesResult;
-            }
-
-            // Run migrations
-            $migrationsRun = $this->migrator->migrate($manifest);
-            
-            $data = $dependenciesResult->data;
-            $data['migrations_run'] = $migrationsRun;
-
-            if ($migrationsRun) {
-                Log::info('Extension installed successfully (dependencies + migrations)', ['id' => $id]);
-                return OpResult::success(__('extensions::lang.extension_installed_with_migrations'), $data);
-            } else {
-                Log::info('Extension installed (dependencies only, no migrations needed)', ['id' => $id]);
-                return OpResult::success(__('extensions::lang.extension_installed_deps_only'), $data);
-            }
-        } catch (\Throwable $e) {
-            Log::error('Extension install failed', ['id' => $id, 'error' => $e->getMessage()]);
-            
-            return OpResult::failure(__('extensions::lang.install_failed', ['error' => $e->getMessage()]), 'exception');
-        }
+        // Use centralized installation logic with enable=false, migrations=true
+        return $this->performInstallation($id, true, false);
     }
 
     /** Install dependencies then enable extension */
     public function installAndEnable(string $id): OpResult
     {
-        $install = $this->install($id);
-        if ($install->isFailure()) {
-            return $install;
-        }
-
-        return $this->enable($id);
+        // Use centralized installation logic with enable=true, migrations=true
+        return $this->performInstallation($id, true, true);
     }
 
     public function migrate(string $id): bool
     {
-        $manifest = $this->registry->find($id);
-        if (!$manifest) {
+        $manifestResult = $this->getManifestOrFail($id);
+        if ($manifestResult instanceof OpResult) {
             return false;
         }
+        $manifest = $manifestResult;
 
         return $this->migrator->migrate($manifest);
     }
@@ -605,11 +481,12 @@ class ExtensionService
             return $this->cachedProtected[$extensionId];
         }
 
-        $manifest = $this->registry->find($extensionId);
-        if (!$manifest) {
+        $manifestResult = $this->getManifestOrFail($extensionId);
+        if ($manifestResult instanceof OpResult) {
             $this->cachedProtected[$extensionId] = false;
             return false;
         }
+        $manifest = $manifestResult;
 
         $result = $this->isProtectedManifest($manifest);
         $this->cachedProtected[$extensionId] = $result;
@@ -624,11 +501,12 @@ class ExtensionService
             return $this->cachedSwitchTypes[$extensionId];
         }
 
-        $manifest = $this->registry->find($extensionId);
-        if (!$manifest) {
+        $manifestResult = $this->getManifestOrFail($extensionId);
+        if ($manifestResult instanceof OpResult) {
             $this->cachedSwitchTypes[$extensionId] = false;
             return false;
         }
+        $manifest = $manifestResult;
 
         $result = $this->isSwitchTypeManifest($manifest);
         $this->cachedSwitchTypes[$extensionId] = $result;
@@ -639,10 +517,11 @@ class ExtensionService
     /** @return string[] ids of required extensions that are not enabled */
     public function missingExtensions(string $extensionId): array
     {
-        $manifest = $this->registry->find($extensionId);
-        if (!$manifest) {
+        $manifestResult = $this->getManifestOrFail($extensionId);
+        if ($manifestResult instanceof OpResult) {
             return [];
         }
+        $manifest = $manifestResult;
 
         return $this->getMissingExtensions($manifest);
     }
@@ -655,10 +534,11 @@ class ExtensionService
 
     public function hasComposerFile(string $extensionId): bool
     {
-        $manifest = $this->registry->find($extensionId);
-        if (!$manifest) {
+        $manifestResult = $this->getManifestOrFail($extensionId);
+        if ($manifestResult instanceof OpResult) {
             return false;
         }
+        $manifest = $manifestResult;
 
         /** @var ComposerService $composerService */
         $composerService = $this->app->make(ComposerService::class);
@@ -672,13 +552,188 @@ class ExtensionService
     }
 
     /**
-     * Centralized validation for extension operations
+     * Get manifest and validate extension exists
      */
-    public function validateExtensionExists(string $id): OpResult
+    private function getManifestOrFail(string $id): OpResult|ManifestValue 
     {
         $manifest = $this->registry->find($id);
         if (!$manifest) {
             return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
+        }
+        return $manifest;
+    }
+
+    /**
+     * Helper to find extension by various criteria - consolidated search logic
+     */
+    private function findExtensionByCriteria(array $criteria): ?Extension
+    {
+        $statuses = $this->getStatuses();
+
+        foreach ($this->getAllManifests() as $m) {
+            $match = true;
+            
+            // Check ID match
+            if (isset($criteria['id']) && $m->id !== $criteria['id']) {
+                $match = false;
+            }
+            
+            // Check name match (case insensitive)
+            if (isset($criteria['name']) && strtolower($m->name) !== strtolower($criteria['name'])) {
+                $match = false;
+            }
+            
+            // Check type match (case insensitive)
+            if (isset($criteria['type']) && strtolower($m->type) !== strtolower($criteria['type'])) {
+                $match = false;
+            }
+            
+            if ($match) {
+                return $this->makeExtension($m, $statuses);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Centralized installation logic - performs all steps needed to install an extension
+     * 
+     * @param string $id Extension ID
+     * @param bool $runMigrations Whether to run migrations
+     * @param bool $enableExtension Whether to enable extension after install
+     * @return OpResult
+     */
+    private function performInstallation(string $id, bool $runMigrations = true, bool $enableExtension = false): OpResult
+    {
+        try {
+            $manifestResult = $this->getManifestOrFail($id);
+            if ($manifestResult instanceof OpResult) {
+                return $manifestResult;
+            }
+            $manifest = $manifestResult;
+
+            // Include bundled vendor first (if any) to reduce false-positive "missing packages"
+            $this->deps->includeExtensionVendor($manifest);
+
+            // Check for missing extension dependencies
+            $missingExt = $this->getMissingExtensions($manifest);
+            if (!empty($missingExt)) {
+                return OpResult::failure(
+                    __('extensions::lang.missing_extensions', ['extensions' => implode(', ', $missingExt)]),
+                    'missing_extensions',
+                    ['extensions' => array_values($missingExt)]
+                );
+            }
+
+            // Check for missing composer packages  
+            $missing = $this->deps->missingPackages($manifest);
+
+            // Install composer dependencies if needed
+            /** @var ComposerService $mergeService */
+            $mergeService = $this->app->make(ComposerService::class);
+            
+            $installedPackages = [];
+            
+            // Check if extension has composer.json
+            if (!$mergeService->extensionHasComposerFile($manifest)) {
+                // No composer.json - just continue without installing packages
+                $installedPackages = [];
+            } else {
+                $composerData = $mergeService->getExtensionComposerData($manifest);
+                $dependencies = $composerData['require'] ?? [];
+
+                if (empty($dependencies)) {
+                    // No dependencies in composer.json - just continue
+                    $installedPackages = [];
+                } elseif (empty($missing)) {
+                    // Dependencies already installed - just continue
+                    $installedPackages = [];
+                } else {
+                    // Dependencies are missing - install them
+                    $success = $mergeService->installDependencies();
+
+                    if (!$success) {
+                        return OpResult::failure(__('extensions::lang.deps_install_failed_merge'), 'install_failed', ['packages' => $missing]);
+                    }
+
+                    $installedPackages = $missing;
+                    $extension = $this->get($id);
+                    ExtensionDepsInstalledEvent::dispatch($extension, ['packages' => $missing, 'method' => 'composer-merge-plugin']);
+                    Log::info('Dependencies installed via composer-merge-plugin', ['id' => $id, 'packages' => $missing]);
+                }
+            }
+
+            $data = ['packages' => $installedPackages];
+
+            // Run migrations if requested
+            $migrationsRun = false;
+            if ($runMigrations) {
+                $migrationsRun = $this->migrator->migrate($manifest);
+                $data['migrations_run'] = $migrationsRun;
+            }
+
+            // Enable extension if requested
+            if ($enableExtension) {
+                // Switch types logic: only one active per type
+                $this->enforceSwitchTypesOnEnable($manifest);
+
+                // Persist + bootstrap
+                $this->activator->enable($id, $manifest->type);
+                $this->clearCache(); // Clear cache after state change
+                $this->bootstrapper->registerProvider($manifest);
+
+                $extension = $this->get($id);
+                ExtensionEnabledEvent::dispatch($extension);
+                Log::info('Extension enabled', ['id' => $id]);
+
+                return OpResult::success(__('extensions::lang.extension_enabled'), $data);
+            }
+
+            // Just installed, not enabled
+            if ($runMigrations) {
+                if ($migrationsRun) {
+                    Log::info('Extension installed successfully (dependencies + migrations)', ['id' => $id]);
+                    return OpResult::success(__('extensions::lang.extension_installed_with_migrations'), $data);
+                } else {
+                    Log::info('Extension installed (dependencies, no migrations needed)', ['id' => $id]);
+                    return OpResult::success(__('extensions::lang.extension_installed_deps_only'), $data);
+                }
+            } else {
+                // Only dependencies were requested (installDependencies case)
+                if (!empty($installedPackages)) {
+                    return OpResult::success(__('extensions::lang.deps_installed'), $data);
+                } else {
+                    // No packages to install or already installed
+                    if (!$mergeService->extensionHasComposerFile($manifest)) {
+                        return OpResult::success(__('extensions::lang.extension_no_composer'), $data);
+                    } else {
+                        $composerData = $mergeService->getExtensionComposerData($manifest);
+                        $dependencies = $composerData['require'] ?? [];
+                        if (empty($dependencies)) {
+                            return OpResult::success(__('extensions::lang.extension_no_deps'), $data);
+                        } else {
+                            return OpResult::success(__('extensions::lang.deps_already_installed'), $data);
+                        }
+                    }
+                }
+            }
+
+        } catch (\Throwable $e) {
+            Log::error('Extension installation failed', ['id' => $id, 'error' => $e->getMessage()]);
+            
+            return OpResult::failure(__('extensions::lang.install_failed', ['error' => $e->getMessage()]), 'exception');
+        }
+    }
+
+    /**
+     * Centralized validation for extension operations
+     */
+    public function validateExtensionExists(string $id): OpResult
+    {
+        $manifestResult = $this->getManifestOrFail($id);
+        if ($manifestResult instanceof OpResult) {
+            return $manifestResult;
         }
         
         return OpResult::success('Extension exists');
@@ -695,25 +750,8 @@ class ExtensionService
             return OpResult::failure(__('extensions::lang.extension_already_enabled'), 'already_enabled');
         }
 
-        $manifest = $this->registry->find($id);
-        $missing = $this->deps->missingPackages($manifest);
-        if (!empty($missing)) {
-            return OpResult::failure(
-                __('extensions::lang.missing_dependencies', ['packages' => implode(', ', $missing)]),
-                'missing_packages',
-                ['packages' => array_values($missing)]
-            );
-        }
-
-        $missingExt = $this->getMissingExtensions($manifest);
-        if (!empty($missingExt)) {
-            return OpResult::failure(
-                __('extensions::lang.missing_extensions', ['extensions' => implode(', ', $missingExt)]),
-                'missing_extensions',
-                ['extensions' => array_values($missingExt)]
-            );
-        }
-
+        // Dependencies validation is now handled in performInstallation()
+        // This method only checks basic enable prerequisites
         return OpResult::success('Extension can be enabled');
     }
 
