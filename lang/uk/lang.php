@@ -82,4 +82,10 @@ return [
     'extension_exists' => "Розширення ':name' вже існує у :path",
     'base_path_not_configured' => "Базовий шлях для типу ':type' не налаштовано",
     'stubs_path_invalid' => 'Некоректний шлях до шаблонів: :path',
+    'discovered_extensions' => 'Виявлено розширень: :count',
+    'removed_orphaned_extensions' => 'Видалено осиротілі розширення: :count',
+    'discovery_failed' => 'Виявлення розширень не вдалося: :error',
+    'extension_installed_with_migrations' => 'Розширення встановлено: залежності і міграції виконано',
+    'extension_installed_deps_only' => 'Розширення встановлено: лише залежності',
+    'install_failed' => 'Встановлення не вдалося: :error',
 ];

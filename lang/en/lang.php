@@ -82,4 +82,10 @@ return [
     'extension_exists' => "Extension ':name' already exists at :path",
     'base_path_not_configured' => "Base path for type ':type' not configured",
     'stubs_path_invalid' => 'Stubs path is invalid: :path',
+    'discovered_extensions' => 'Discovered extensions: :count',
+    'removed_orphaned_extensions' => 'Removed orphaned extensions: :count',
+    'discovery_failed' => 'Extension discovery failed: :error',
+    'extension_installed_with_migrations' => 'Extension installed: dependencies and migrations run',
+    'extension_installed_deps_only' => 'Extension installed: dependencies only',
+    'install_failed' => 'Installation failed: :error',
 ];
