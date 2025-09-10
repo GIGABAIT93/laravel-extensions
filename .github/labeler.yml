@@ -1,0 +1,44 @@
+# Configuration for auto-labeling PRs
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file: 
+      - "docs/**/*"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "*.md"
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: "tests/**/*"
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - "composer.json"
+      - "composer.lock"
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - ".github/**/*"
+      - "phpstan.neon"
+      - "phpunit.xml"
+      - ".php-cs-fixer.php"
+
+enhancement:
+  - changed-files:
+    - any-glob-to-any-file: "src/**/*"
+
+configuration:
+  - changed-files:
+    - any-glob-to-any-file:
+      - "config/**/*"
+      - "database/migrations/**/*"
+
+stubs:
+  - changed-files:
+    - any-glob-to-any-file: "stubs/**/*"
+
+breaking-change:
+  - head-branch: ['feat/*', 'breaking/*']
