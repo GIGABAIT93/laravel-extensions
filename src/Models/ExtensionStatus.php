@@ -7,6 +7,9 @@ namespace Gigabait93\Extensions\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
+ * @property string $name
+ * @property string $type
+ * @property bool $enabled
  * @method static static updateOrCreate(array $attributes, array $values = [])
  */
 class ExtensionStatus extends Model

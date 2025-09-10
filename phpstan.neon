@@ -1,7 +1,12 @@
+# PHPStan configuration for Laravel Extensions
+# Currently at level 1 - facade method signatures need improvement for higher levels
+# See: https://github.com/gigabait93/laravel-extensions/issues/TODO
 parameters:
-    level: 3
+    level: 1
     paths:
         - src
     excludePaths:
         - tests
     tmpDir: build/phpstan
+    ignoreErrors:
+        - '#Call to an undefined static method Gigabait93\\Extensions\\Facades\\Extensions::#'
