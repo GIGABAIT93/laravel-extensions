@@ -237,6 +237,93 @@ final class Extension
         return ExtensionsFacade::missingPackages($this->id);
     }
 
+    public function isProtected(): bool
+    {
+        return ExtensionsFacade::isProtected($this->id);
+    }
+
+    public function isSwitchType(): bool
+    {
+        return ExtensionsFacade::isSwitchType($this->id);
+    }
+
+    public function canDisable(): bool
+    {
+        return $this->enabled && (!$this->isProtected() || $this->isSwitchType());
+    }
+
+    public function canEnable(): bool
+    {
+        if ($this->enabled || $this->broken) {
+            return false;
+        }
+
+        return empty($this->missingPackages()) && empty($this->missingExtensions());
+    }
+
+    public function canDelete(): bool
+    {
+        return !$this->isProtected();
+    }
+
+    public function missingExtensions(): array
+    {
+        return ExtensionsFacade::missingExtensions($this->id);
+    }
+
+    public function requiredBy(): array
+    {
+        return ExtensionsFacade::requiredByEnabled($this->id);
+    }
+
+    public function hasDependencies(): bool
+    {
+        return !empty($this->requires_extensions) || !empty($this->requires_packages);
+    }
+
+    public function hasComposerFile(): bool
+    {
+        return ExtensionsFacade::hasComposerFile($this->id);
+    }
+
+    public function isCompatibleWith(string $version): bool
+    {
+        if ($this->compatible_with === null) {
+            return true;
+        }
+
+        return version_compare($version, $this->compatible_with, '>=');
+    }
+
+    public function install(): OpResult
+    {
+        return ExtensionsFacade::install($this->id);
+    }
+
+    public function installAndEnable(): OpResult
+    {
+        return ExtensionsFacade::installAndEnable($this->id);
+    }
+
+    public function getStatus(): array
+    {
+        return [
+            'enabled' => $this->enabled,
+            'broken' => $this->broken,
+            'protected' => $this->isProtected(),
+            'switch_type' => $this->isSwitchType(),
+            'can_enable' => $this->canEnable(),
+            'can_disable' => $this->canDisable(),
+            'can_delete' => $this->canDelete(),
+            'has_dependencies' => $this->hasDependencies(),
+            'has_composer_file' => $this->hasComposerFile(),
+            'missing_packages' => $this->missingPackages(),
+            'missing_extensions' => $this->missingExtensions(),
+            'required_by' => $this->requiredBy(),
+            'issue' => $this->issue,
+        ];
+    }
+
     /**
      * Export a flattened array view (manifest fields + flags).
      *
@@ -247,6 +334,8 @@ final class Extension
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'description' => $this->description,
+            'author' => $this->author,
             'type' => $this->type,
             'provider' => $this->provider,
             'path' => $this->path,
@@ -258,6 +347,33 @@ final class Extension
             'enabled' => $this->enabled,
             'broken' => $this->broken,
             'issue' => $this->issue,
+            'status' => $this->getStatus(),
         ];
+    }
+
+    public function toDetailedArray(): array
+    {
+        return array_merge($this->toArray(), [
+            'dependencies' => [
+                'extensions' => $this->requires_extensions,
+                'packages' => $this->requires_packages,
+                'missing_extensions' => $this->missingExtensions(),
+                'missing_packages' => $this->missingPackages(),
+            ],
+            'relationships' => [
+                'required_by' => $this->requiredBy(),
+            ],
+            'capabilities' => [
+                'can_enable' => $this->canEnable(),
+                'can_disable' => $this->canDisable(),
+                'can_delete' => $this->canDelete(),
+                'has_composer_file' => $this->hasComposerFile(),
+            ],
+            'properties' => [
+                'is_protected' => $this->isProtected(),
+                'is_switch_type' => $this->isSwitchType(),
+                'has_dependencies' => $this->hasDependencies(),
+            ],
+        ]);
     }
 }

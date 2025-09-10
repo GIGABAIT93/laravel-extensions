@@ -28,6 +28,12 @@ class ExtensionService
 
     private ?Collection $cachedManifests = null;
 
+    private array $cachedExtensions = [];
+
+    private array $cachedProtected = [];
+
+    private array $cachedSwitchTypes = [];
+
     public function __construct(
         private ActivatorContract $activator,
         private RegistryService $registry,
@@ -55,24 +61,52 @@ class ExtensionService
     {
         $this->cachedStatuses = null;
         $this->cachedManifests = null;
+        $this->cachedExtensions = [];
+        $this->cachedProtected = [];
+        $this->cachedSwitchTypes = [];
         $this->registry->clearCache();
     }
 
     /** Ensure manifests are up-to-date and purge activator entries for missing extensions */
-    public function discover(): void
+    public function discover(): OpResult
     {
-        $this->clearCache();
-        $this->registry->discover();
+        try {
+            $this->clearCache();
+            $this->registry->discover();
 
-        $knownIds = array_flip(
-            $this->getAllManifests()->map(static fn ($m) => $m->id)->all()
-        );
+            $knownIds = array_flip(
+                $this->getAllManifests()->map(static fn ($m) => $m->id)->all()
+            );
 
-        foreach (array_keys($this->getStatuses()) as $id) {
-            if (!isset($knownIds[$id])) {
-                $this->activator->remove($id);
-                $this->clearCache(); // Clear cache after removing status
+            $removedExtensions = [];
+            foreach (array_keys($this->getStatuses()) as $id) {
+                if (!isset($knownIds[$id])) {
+                    $this->activator->remove($id);
+                    $removedExtensions[] = $id;
+                    $this->clearCache(); // Clear cache after removing status
+                }
             }
+
+            $discoveredCount = $this->getAllManifests()->count();
+            $message = __('extensions::lang.discovered_extensions', ['count' => $discoveredCount]);
+
+            if (!empty($removedExtensions)) {
+                $message .= ' ' . __('extensions::lang.removed_orphaned_extensions', ['count' => count($removedExtensions)]);
+            }
+
+            Log::info('Extensions discovered', [
+                'discovered' => $discoveredCount,
+                'removed_orphaned' => $removedExtensions,
+            ]);
+
+            return OpResult::success($message, [
+                'discovered_count' => $discoveredCount,
+                'removed_orphaned' => $removedExtensions,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Extension discovery failed', ['error' => $e->getMessage()]);
+
+            return OpResult::failure(__('extensions::lang.discovery_failed', ['error' => $e->getMessage()]), 'exception');
         }
     }
 
@@ -88,14 +122,23 @@ class ExtensionService
 
     public function get(string $id): ?Extension
     {
+        // Use cache if available
+        if (isset($this->cachedExtensions[$id])) {
+            return $this->cachedExtensions[$id];
+        }
+
         $manifest = $this->registry->find($id);
         if (!$manifest) {
             return null;
         }
 
         $statuses = $this->getStatuses();
-
-        return $this->makeExtension($manifest, $statuses);
+        $extension = $this->makeExtension($manifest, $statuses);
+        
+        // Cache the extension
+        $this->cachedExtensions[$id] = $extension;
+        
+        return $extension;
     }
 
     public function findByName(string $name): ?Extension
@@ -162,35 +205,18 @@ class ExtensionService
     public function enable(string $id): OpResult
     {
         try {
+            $validation = $this->validateCanEnable($id);
+            if ($validation->isFailure()) {
+                // Handle special case for already enabled
+                if ($validation->getCode() === 'already_enabled') {
+                    return OpResult::success(__('extensions::lang.extension_already_enabled'));
+                }
+                return $validation;
+            }
+
             $manifest = $this->registry->find($id);
-            if (!$manifest) {
-                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
-            }
-
-            if ($this->activator->isEnabled($id)) {
-                return OpResult::success(__('extensions::lang.extension_already_enabled'));
-            }
-
             // Include bundled vendor first (if any) to reduce false-positive "missing packages"
             $this->deps->includeExtensionVendor($manifest);
-
-            $missing = $this->deps->missingPackages($manifest);
-            if (!empty($missing)) {
-                return OpResult::failure(
-                    __('extensions::lang.missing_dependencies', ['packages' => implode(', ', $missing)]),
-                    'missing_packages',
-                    ['packages' => array_values($missing)]
-                );
-            }
-
-            $missingExt = $this->missingExtensions($manifest);
-            if (!empty($missingExt)) {
-                return OpResult::failure(
-                    __('extensions::lang.missing_extensions', ['extensions' => implode(', ', $missingExt)]),
-                    'missing_extensions',
-                    ['extensions' => array_values($missingExt)]
-                );
-            }
 
             // Switch types logic: only one active per type
             $this->enforceSwitchTypesOnEnable($manifest);
@@ -216,27 +242,16 @@ class ExtensionService
     public function disable(string $id): OpResult
     {
         try {
+            $validation = $this->validateCanDisable($id);
+            if ($validation->isFailure()) {
+                // Handle special case for already disabled
+                if ($validation->getCode() === 'already_disabled') {
+                    return OpResult::success(__('extensions::lang.extension_already_disabled'));
+                }
+                return $validation;
+            }
+
             $manifest = $this->registry->find($id);
-            if (!$manifest) {
-                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
-            }
-
-            if (!$this->activator->isEnabled($id)) {
-                return OpResult::success(__('extensions::lang.extension_already_disabled'));
-            }
-
-            if ($this->isProtected($manifest) && !$this->isSwitchType($manifest)) {
-                return OpResult::failure(__('extensions::lang.extension_protected_disable'), 'protected');
-            }
-
-            $requiredBy = $this->requiredByEnabled($id);
-            if (!empty($requiredBy)) {
-                return OpResult::failure(
-                    __('extensions::lang.extension_required_by', ['extensions' => implode(', ', $requiredBy)]),
-                    'required_by',
-                    ['required_by' => $requiredBy]
-                );
-            }
 
             $extension = $this->get($id);
             $this->activator->disable($id, $manifest->type);
@@ -363,10 +378,38 @@ class ExtensionService
         }
     }
 
+    /** Install dependencies without enabling extension */
+    public function install(string $id): OpResult
+    {
+        try {
+            $manifest = $this->registry->find($id);
+            if (!$manifest) {
+                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
+            }
+
+            $result = $this->installDependencies($id);
+            if ($result->isFailure()) {
+                return $result;
+            }
+
+            // Run migrations without enabling
+            if ($this->migrator->migrate($manifest)) {
+                Log::info('Extension installed (dependencies and migrations)', ['id' => $id]);
+                return OpResult::success(__('extensions::lang.extension_installed'), $result->getData());
+            }
+
+            return OpResult::success(__('extensions::lang.extension_deps_installed'), $result->getData());
+        } catch (\Throwable $e) {
+            Log::error('Extension install failed', ['id' => $id, 'error' => $e->getMessage()]);
+            
+            return OpResult::failure(__('extensions::lang.install_failed', ['error' => $e->getMessage()]), 'exception');
+        }
+    }
+
     /** Install dependencies then enable extension */
     public function installAndEnable(string $id): OpResult
     {
-        $install = $this->installDependencies($id);
+        $install = $this->install($id);
         if ($install->isFailure()) {
             return $install;
         }
@@ -538,17 +581,169 @@ class ExtensionService
         return $summary;
     }
 
-    private function isExtensionProtected(string $extensionId): bool
+    public function isProtected(string $extensionId): bool
+    {
+        // Use cache if available
+        if (array_key_exists($extensionId, $this->cachedProtected)) {
+            return $this->cachedProtected[$extensionId];
+        }
+
+        $manifest = $this->registry->find($extensionId);
+        if (!$manifest) {
+            $this->cachedProtected[$extensionId] = false;
+            return false;
+        }
+
+        $result = $this->isProtectedManifest($manifest);
+        $this->cachedProtected[$extensionId] = $result;
+        
+        return $result;
+    }
+
+    public function isSwitchType(string $extensionId): bool
+    {
+        // Use cache if available
+        if (array_key_exists($extensionId, $this->cachedSwitchTypes)) {
+            return $this->cachedSwitchTypes[$extensionId];
+        }
+
+        $manifest = $this->registry->find($extensionId);
+        if (!$manifest) {
+            $this->cachedSwitchTypes[$extensionId] = false;
+            return false;
+        }
+
+        $result = $this->isSwitchTypeManifest($manifest);
+        $this->cachedSwitchTypes[$extensionId] = $result;
+        
+        return $result;
+    }
+
+    /** @return string[] ids of required extensions that are not enabled */
+    public function missingExtensions(string $extensionId): array
+    {
+        $manifest = $this->registry->find($extensionId);
+        if (!$manifest) {
+            return [];
+        }
+
+        return $this->getMissingExtensions($manifest);
+    }
+
+    /** @return string[] ids of enabled extensions that require this extension */
+    public function requiredByEnabled(string $extensionId): array
+    {
+        return $this->getRequiredByEnabled($extensionId);
+    }
+
+    public function hasComposerFile(string $extensionId): bool
     {
         $manifest = $this->registry->find($extensionId);
         if (!$manifest) {
             return false;
         }
 
-        return $this->isProtected($manifest);
+        /** @var ComposerService $composerService */
+        $composerService = $this->app->make(ComposerService::class);
+        
+        return $composerService->extensionHasComposerFile($manifest);
     }
 
-    private function isProtected(ManifestValue $manifest): bool
+    private function isExtensionProtected(string $extensionId): bool
+    {
+        return $this->isProtected($extensionId);
+    }
+
+    /**
+     * Centralized validation for extension operations
+     */
+    public function validateExtensionExists(string $id): OpResult
+    {
+        $manifest = $this->registry->find($id);
+        if (!$manifest) {
+            return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
+        }
+        
+        return OpResult::success('Extension exists');
+    }
+
+    public function validateCanEnable(string $id): OpResult
+    {
+        $validationResult = $this->validateExtensionExists($id);
+        if ($validationResult->isFailure()) {
+            return $validationResult;
+        }
+
+        if ($this->activator->isEnabled($id)) {
+            return OpResult::failure(__('extensions::lang.extension_already_enabled'), 'already_enabled');
+        }
+
+        $manifest = $this->registry->find($id);
+        $missing = $this->deps->missingPackages($manifest);
+        if (!empty($missing)) {
+            return OpResult::failure(
+                __('extensions::lang.missing_dependencies', ['packages' => implode(', ', $missing)]),
+                'missing_packages',
+                ['packages' => array_values($missing)]
+            );
+        }
+
+        $missingExt = $this->getMissingExtensions($manifest);
+        if (!empty($missingExt)) {
+            return OpResult::failure(
+                __('extensions::lang.missing_extensions', ['extensions' => implode(', ', $missingExt)]),
+                'missing_extensions',
+                ['extensions' => array_values($missingExt)]
+            );
+        }
+
+        return OpResult::success('Extension can be enabled');
+    }
+
+    public function validateCanDisable(string $id): OpResult
+    {
+        $validationResult = $this->validateExtensionExists($id);
+        if ($validationResult->isFailure()) {
+            return $validationResult;
+        }
+
+        if (!$this->activator->isEnabled($id)) {
+            return OpResult::failure(__('extensions::lang.extension_already_disabled'), 'already_disabled');
+        }
+
+        $manifest = $this->registry->find($id);
+        if ($this->isProtectedManifest($manifest) && !$this->isSwitchTypeManifest($manifest)) {
+            return OpResult::failure(__('extensions::lang.extension_protected_disable'), 'protected');
+        }
+
+        $requiredBy = $this->getRequiredByEnabled($id);
+        if (!empty($requiredBy)) {
+            return OpResult::failure(
+                __('extensions::lang.extension_required_by', ['extensions' => implode(', ', $requiredBy)]),
+                'required_by',
+                ['required_by' => $requiredBy]
+            );
+        }
+
+        return OpResult::success('Extension can be disabled');
+    }
+
+    public function validateCanDelete(string $id): OpResult
+    {
+        $validationResult = $this->validateExtensionExists($id);
+        if ($validationResult->isFailure()) {
+            return $validationResult;
+        }
+
+        $manifest = $this->registry->find($id);
+        if ($this->isProtectedManifest($manifest)) {
+            return OpResult::failure(__('extensions::lang.extension_protected_delete'), 'protected');
+        }
+
+        return OpResult::success('Extension can be deleted');
+    }
+
+    private function isProtectedManifest(ManifestValue $manifest): bool
     {
         // Normalize protected list:
         // - ['core', 'billing']
@@ -573,7 +768,7 @@ class ExtensionService
         return isset($set[$idLower]) || isset($set[$nameLower]);
     }
 
-    private function isSwitchType(ManifestValue $manifest): bool
+    private function isSwitchTypeManifest(ManifestValue $manifest): bool
     {
         $switch = array_map('strtolower', (array) config('extensions.switch_types', []));
 
@@ -581,7 +776,7 @@ class ExtensionService
     }
 
     /** @return string[] ids of enabled extensions that require $id */
-    private function requiredByEnabled(string $id): array
+    private function getRequiredByEnabled(string $id): array
     {
         $result = [];
         $statuses = $this->getStatuses();
@@ -601,7 +796,7 @@ class ExtensionService
     }
 
     /** @return string[] ids of required extensions that are not enabled */
-    private function missingExtensions(ManifestValue $manifest): array
+    private function getMissingExtensions(ManifestValue $manifest): array
     {
         $result = [];
         foreach ((array) $manifest->requires_extensions as $req) {
@@ -630,7 +825,7 @@ class ExtensionService
             if (strtolower($m->type) !== $type) {
                 continue;
             }
-            if ($this->isProtected($m)) {
+            if ($this->isProtectedManifest($m)) {
                 continue;
             }
             if ($this->activator->isEnabled($m->id)) {
@@ -643,14 +838,12 @@ class ExtensionService
     public function delete(string $id): OpResult
     {
         try {
-            $manifest = $this->registry->find($id);
-            if (!$manifest) {
-                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
+            $validation = $this->validateCanDelete($id);
+            if ($validation->isFailure()) {
+                return $validation;
             }
 
-            if ($this->isProtected($manifest)) {
-                return OpResult::failure(__('extensions::lang.extension_protected_delete'), 'protected');
-            }
+            $manifest = $this->registry->find($id);
 
             $extension = $this->get($id);
 
