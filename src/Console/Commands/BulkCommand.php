@@ -33,6 +33,7 @@ class BulkCommand extends BaseCommand
 
         if (!in_array($operation, ['enable', 'disable'])) {
             $this->components->error('Operation must be either "enable" or "disable"');
+
             return self::FAILURE;
         }
 
@@ -50,6 +51,7 @@ class BulkCommand extends BaseCommand
             $allExtensions = $extensions->all();
             $choices = $allExtensions->mapWithKeys(function ($extension) {
                 $status = $extension->isEnabled() ? '✓' : '✗';
+
                 return [$extension->id => "{$extension->name} ({$extension->id}) [{$status}]"];
             })->toArray();
 
@@ -62,6 +64,7 @@ class BulkCommand extends BaseCommand
 
         if (empty($targetIds)) {
             $this->components->warn('No extensions selected.');
+
             return self::SUCCESS;
         }
 
@@ -69,17 +72,20 @@ class BulkCommand extends BaseCommand
         if ($operation === 'enable') {
             $targetIds = array_filter($targetIds, function ($id) use ($extensions) {
                 $ext = $extensions->get($id);
+
                 return $ext && !$ext->isEnabled();
             });
         } else {
             $targetIds = array_filter($targetIds, function ($id) use ($extensions) {
                 $ext = $extensions->get($id);
+
                 return $ext && $ext->isEnabled();
             });
         }
 
         if (empty($targetIds)) {
             $this->components->info("No extensions need to be {$operation}d.");
+
             return self::SUCCESS;
         }
 
@@ -92,6 +98,7 @@ class BulkCommand extends BaseCommand
 
             if (!$confirmed) {
                 $this->components->info('Operation cancelled.');
+
                 return self::SUCCESS;
             }
         }

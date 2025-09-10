@@ -31,6 +31,7 @@ class StatsCommand extends BaseCommand
                 'broken_extensions' => $broken->pluck('id')->toArray(),
                 'extensions_with_issues' => $withIssues->pluck('id')->toArray(),
             ], JSON_PRETTY_PRINT));
+
             return self::SUCCESS;
         }
 
@@ -54,12 +55,12 @@ class StatsCommand extends BaseCommand
         if (!empty($stats['by_type'])) {
             $this->newLine();
             $this->components->info('Extensions by Type');
-            
+
             $typeRows = [];
             foreach ($stats['by_type'] as $type => $count) {
                 $typeRows[] = [$type, $count];
             }
-            
+
             table(['Type', 'Count'], $typeRows);
         }
 
@@ -67,11 +68,11 @@ class StatsCommand extends BaseCommand
         if ($broken->isNotEmpty() || $withIssues->isNotEmpty()) {
             $this->newLine();
             $this->components->warn('Issues Found');
-            
+
             if ($broken->isNotEmpty()) {
                 $this->line('<fg=red>Broken Extensions:</> ' . $broken->pluck('id')->join(', '));
             }
-            
+
             if ($withIssues->isNotEmpty()) {
                 $this->line('<fg=yellow>Extensions with Missing Dependencies:</> ' . $withIssues->pluck('id')->join(', '));
             }
@@ -83,11 +84,11 @@ class StatsCommand extends BaseCommand
     private function formatBytes(int $bytes): string
     {
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, 2) . ' ' . $units[$i];
     }
 }

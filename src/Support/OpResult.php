@@ -54,7 +54,7 @@ readonly class OpResult
         if ($key === null) {
             return $this->data;
         }
-        
+
         return $this->data[$key] ?? $default;
     }
 

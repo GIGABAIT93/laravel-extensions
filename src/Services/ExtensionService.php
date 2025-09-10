@@ -140,10 +140,10 @@ class ExtensionService
 
         $statuses = $this->getStatuses();
         $extension = $this->makeExtension($manifest, $statuses);
-        
+
         // Cache the extension
         $this->cachedExtensions[$id] = $extension;
-        
+
         return $extension;
     }
 
@@ -163,6 +163,7 @@ class ExtensionService
         if ($type !== null) {
             $criteria['type'] = $type;
         }
+
         return $this->findExtensionByCriteria($criteria);
     }
 
@@ -208,6 +209,7 @@ class ExtensionService
                 if ($validation->errorCode === 'already_disabled') {
                     return OpResult::success(__('extensions::lang.extension_already_disabled'));
                 }
+
                 return $validation;
             }
 
@@ -453,13 +455,13 @@ class ExtensionService
     public function getStats(): array
     {
         $extensions = $this->all();
-        
+
         return [
             'total' => $extensions->count(),
             'enabled' => $extensions->filter->isEnabled()->count(),
             'disabled' => $extensions->reject->isEnabled()->count(),
             'broken' => $extensions->filter->isBroken()->count(),
-            'protected' => $extensions->filter(fn($e) => $e->isProtected())->count(),
+            'protected' => $extensions->filter(fn ($e) => $e->isProtected())->count(),
             'with_dependencies' => $extensions->filter->hasDependencies()->count(),
             'by_type' => $extensions->groupBy('type')->map->count()->toArray(),
         ];
@@ -472,6 +474,7 @@ class ExtensionService
         foreach ($ids as $id) {
             $results[$id] = $this->enable($id);
         }
+
         return $results;
     }
 
@@ -481,6 +484,7 @@ class ExtensionService
         foreach ($ids as $id) {
             $results[$id] = $this->disable($id);
         }
+
         return $results;
     }
 
@@ -501,6 +505,7 @@ class ExtensionService
     public function search(string $query): Collection
     {
         $query = strtolower($query);
+
         return $this->all()->filter(function ($extension) use ($query) {
             return str_contains(strtolower($extension->name), $query) ||
                    str_contains(strtolower($extension->id), $query) ||
@@ -594,13 +599,14 @@ class ExtensionService
         $manifestResult = $this->getManifestOrFail($extensionId);
         if ($manifestResult instanceof OpResult) {
             $this->cachedProtected[$extensionId] = false;
+
             return false;
         }
         $manifest = $manifestResult;
 
         $result = $this->isProtectedManifest($manifest);
         $this->cachedProtected[$extensionId] = $result;
-        
+
         return $result;
     }
 
@@ -614,13 +620,14 @@ class ExtensionService
         $manifestResult = $this->getManifestOrFail($extensionId);
         if ($manifestResult instanceof OpResult) {
             $this->cachedSwitchTypes[$extensionId] = false;
+
             return false;
         }
         $manifest = $manifestResult;
 
         $result = $this->isSwitchTypeManifest($manifest);
         $this->cachedSwitchTypes[$extensionId] = $result;
-        
+
         return $result;
     }
 
@@ -652,7 +659,7 @@ class ExtensionService
 
         /** @var ComposerService $composerService */
         $composerService = $this->app->make(ComposerService::class);
-        
+
         return $composerService->extensionHasComposerFile($manifest);
     }
 
@@ -662,19 +669,20 @@ class ExtensionService
     }
 
     /**
-     * Get manifest and validate extension exists
+     * Get manifest and validate extension exists.
      */
-    private function getManifestOrFail(string $id): OpResult|ManifestValue 
+    private function getManifestOrFail(string $id): OpResult|ManifestValue
     {
         $manifest = $this->registry->find($id);
         if (!$manifest) {
             return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
         }
+
         return $manifest;
     }
 
     /**
-     * Helper to find extension by various criteria - consolidated search logic
+     * Helper to find extension by various criteria - consolidated search logic.
      */
     private function findExtensionByCriteria(array $criteria): ?Extension
     {
@@ -682,22 +690,22 @@ class ExtensionService
 
         foreach ($this->getAllManifests() as $m) {
             $match = true;
-            
+
             // Check ID match
             if (isset($criteria['id']) && $m->id !== $criteria['id']) {
                 $match = false;
             }
-            
+
             // Check name match (case insensitive)
             if (isset($criteria['name']) && strtolower($m->name) !== strtolower($criteria['name'])) {
                 $match = false;
             }
-            
+
             // Check type match (case insensitive)
             if (isset($criteria['type']) && strtolower($m->type) !== strtolower($criteria['type'])) {
                 $match = false;
             }
-            
+
             if ($match) {
                 return $this->makeExtension($m, $statuses);
             }
@@ -707,8 +715,8 @@ class ExtensionService
     }
 
     /**
-     * Centralized installation logic - performs all steps needed to install an extension
-     * 
+     * Centralized installation logic - performs all steps needed to install an extension.
+     *
      * @param string $id Extension ID
      * @param bool $runMigrations Whether to run migrations
      * @param bool $enableExtension Whether to enable extension after install
@@ -736,15 +744,15 @@ class ExtensionService
                 );
             }
 
-            // Check for missing composer packages  
+            // Check for missing composer packages
             $missing = $this->deps->missingPackages($manifest);
 
             // Install composer dependencies if needed
             /** @var ComposerService $mergeService */
             $mergeService = $this->app->make(ComposerService::class);
-            
+
             $installedPackages = [];
-            
+
             // Check if extension has composer.json
             if (!$mergeService->extensionHasComposerFile($manifest)) {
                 // No composer.json - just continue without installing packages
@@ -804,9 +812,11 @@ class ExtensionService
             if ($runMigrations) {
                 if ($migrationsRun) {
                     Log::info('Extension installed successfully (dependencies + migrations)', ['id' => $id]);
+
                     return OpResult::success(__('extensions::lang.extension_installed_with_migrations'), $data);
                 } else {
                     Log::info('Extension installed (dependencies, no migrations needed)', ['id' => $id]);
+
                     return OpResult::success(__('extensions::lang.extension_installed_deps_only'), $data);
                 }
             } else {
@@ -831,13 +841,13 @@ class ExtensionService
 
         } catch (\Throwable $e) {
             Log::error('Extension installation failed', ['id' => $id, 'error' => $e->getMessage()]);
-            
+
             return OpResult::failure(__('extensions::lang.install_failed', ['error' => $e->getMessage()]), 'exception');
         }
     }
 
     /**
-     * Centralized validation for extension operations
+     * Centralized validation for extension operations.
      */
     public function validateExtensionExists(string $id): OpResult
     {
@@ -845,7 +855,7 @@ class ExtensionService
         if ($manifestResult instanceof OpResult) {
             return $manifestResult;
         }
-        
+
         return OpResult::success('Extension exists');
     }
 

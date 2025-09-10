@@ -67,6 +67,7 @@ class SearchCommand extends BaseCommand
 
         if ($results->isEmpty()) {
             $this->components->warn('No extensions found matching your criteria.');
+
             return self::SUCCESS;
         }
 

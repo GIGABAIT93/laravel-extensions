@@ -397,11 +397,11 @@ final class Extension
         if (empty($this->provider)) {
             return false;
         }
-        
+
         // Convert namespace to path
         $providerPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $this->provider) . '.php';
         $fullPath = $this->path . DIRECTORY_SEPARATOR . $providerPath;
-        
+
         return file_exists($fullPath);
     }
 
@@ -410,16 +410,16 @@ final class Extension
         if (!$this->exists()) {
             return 0;
         }
-        
+
         $size = 0;
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($this->path, \FilesystemIterator::SKIP_DOTS)
         );
-        
+
         foreach ($iterator as $file) {
             $size += $file->getSize();
         }
-        
+
         return $size;
     }
 
@@ -427,11 +427,11 @@ final class Extension
     {
         $bytes = $this->getSize();
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
@@ -443,6 +443,7 @@ final class Extension
                 return true;
             }
         }
+
         return false;
     }
 
@@ -455,6 +456,7 @@ final class Extension
                 return file_get_contents($path) ?: null;
             }
         }
+
         return null;
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gigabait93\Extensions\Providers;
 
+use Gigabait93\Extensions\Console\Commands\BulkCommand;
 use Gigabait93\Extensions\Console\Commands\DeleteCommand;
 use Gigabait93\Extensions\Console\Commands\DisableCommand;
 use Gigabait93\Extensions\Console\Commands\DiscoverCommand;
@@ -16,7 +17,6 @@ use Gigabait93\Extensions\Console\Commands\PublishCommand;
 use Gigabait93\Extensions\Console\Commands\ReloadCommand;
 use Gigabait93\Extensions\Console\Commands\SearchCommand;
 use Gigabait93\Extensions\Console\Commands\StatsCommand;
-use Gigabait93\Extensions\Console\Commands\BulkCommand;
 use Gigabait93\Extensions\Contracts\ActivatorContract;
 use Gigabait93\Extensions\Services\AutoloadService;
 use Gigabait93\Extensions\Services\BootstrapService;
