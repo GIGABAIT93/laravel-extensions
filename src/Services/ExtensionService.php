@@ -208,7 +208,7 @@ class ExtensionService
             $validation = $this->validateCanEnable($id);
             if ($validation->isFailure()) {
                 // Handle special case for already enabled
-                if ($validation->getCode() === 'already_enabled') {
+                if ($validation->errorCode === 'already_enabled') {
                     return OpResult::success(__('extensions::lang.extension_already_enabled'));
                 }
                 return $validation;
@@ -245,7 +245,7 @@ class ExtensionService
             $validation = $this->validateCanDisable($id);
             if ($validation->isFailure()) {
                 // Handle special case for already disabled
-                if ($validation->getCode() === 'already_disabled') {
+                if ($validation->errorCode === 'already_disabled') {
                     return OpResult::success(__('extensions::lang.extension_already_disabled'));
                 }
                 return $validation;
@@ -381,29 +381,7 @@ class ExtensionService
     /** Install dependencies without enabling extension */
     public function install(string $id): OpResult
     {
-        try {
-            $manifest = $this->registry->find($id);
-            if (!$manifest) {
-                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
-            }
-
-            $result = $this->installDependencies($id);
-            if ($result->isFailure()) {
-                return $result;
-            }
-
-            // Run migrations without enabling
-            if ($this->migrator->migrate($manifest)) {
-                Log::info('Extension installed (dependencies and migrations)', ['id' => $id]);
-                return OpResult::success(__('extensions::lang.extension_installed'), $result->getData());
-            }
-
-            return OpResult::success(__('extensions::lang.extension_deps_installed'), $result->getData());
-        } catch (\Throwable $e) {
-            Log::error('Extension install failed', ['id' => $id, 'error' => $e->getMessage()]);
-            
-            return OpResult::failure(__('extensions::lang.install_failed', ['error' => $e->getMessage()]), 'exception');
-        }
+        return $this->installDependencies($id);
     }
 
     /** Install dependencies then enable extension */
@@ -746,8 +724,9 @@ class ExtensionService
     private function isProtectedManifest(ManifestValue $manifest): bool
     {
         // Normalize protected list:
-        // - ['core', 'billing']
-        // - ['core' => true, 'billing' => 1, 'other' => false]
+        // - ['core', 'billing'] -> both core and billing are protected
+        // - ['core' => true, 'billing' => 1, 'other' => false] -> core and billing are protected
+        // - ['Modules' => 'Sample'] -> Sample of type Modules is protected
         // - mixed variants with string values
         $raw = (array) config('extensions.protected', []);
         $list = [];
@@ -757,6 +736,11 @@ class ExtensionService
                 $list[] = $v;
             } elseif (is_string($k) && ($v === true || $v === 1)) {
                 $list[] = $k;
+            } elseif (is_string($k) && is_string($v)) {
+                // Format like ['Modules' => 'Sample'] means extension 'Sample' of type 'Modules' is protected
+                if (strtolower($manifest->type) === strtolower($k)) {
+                    $list[] = $v;
+                }
             }
         }
 
