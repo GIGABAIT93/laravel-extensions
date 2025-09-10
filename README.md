@@ -1,163 +1,314 @@
-### Laravel Extensions
+# Laravel Extensions
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/gigabait93/laravel-extensions.svg?style=flat-square)](https://packagist.org/packages/gigabait93/laravel-extensions)
-[![Total Downloads](https://img.shields.io/packagist/dt/gigabait93/laravel-extensions.svg?style=flat-square)](https://packagist.org/packages/gigabait93/laravel-extensions)
+[![Latest Stable Version](https://img.shields.io/packagist/v/gigabait93/laravel-extensions.svg)](https://packagist.org/packages/gigabait93/laravel-extensions)
+[![Total Downloads](https://img.shields.io/packagist/dt/gigabait93/laravel-extensions.svg)](https://packagist.org/packages/gigabait93/laravel-extensions)
+[![License](https://img.shields.io/packagist/l/gigabait93/laravel-extensions.svg)](https://packagist.org/packages/gigabait93/laravel-extensions)
+[![PHP Version](https://img.shields.io/packagist/php-v/gigabait93/laravel-extensions.svg)](https://packagist.org/packages/gigabait93/laravel-extensions)
 
-This package provides a framework for managing extensions in a Laravel application. It includes services, commands, and
-activators to handle extensions effectively.
-Full documentation: [English](docs/en/introduction.md) | [Українська](docs/uk/introduction.md)
+A powerful modular extension framework for Laravel 12+ that enables you to build scalable, maintainable applications with runtime discovery, activation control, and scaffolding utilities.
 
+## 🚀 Features
 
----
+- **Runtime Discovery**: Automatically discover and load extensions from configured directories
+- **Activation Management**: Enable/disable extensions with dependency checks and protection mechanisms
+- **Flexible Storage**: Choose between file-based or database activators for persistence
+- **Rich API**: Manage extensions through facade, HTTP API, and Artisan commands
+- **Async Operations**: Queue enable/disable/install operations with status monitoring
+- **Dependency Resolution**: Smart dependency management with conflict detection
+- **Code Generation**: Scaffold new extensions with customizable stubs
+- **Event System**: Comprehensive event dispatching for extension lifecycle
+- **Multi-type Support**: Support for different extension types (Modules, Themes, etc.)
 
-### Installation
-
-1. Add to your file `composer.json`:
-   ```json
-    "autoload": {
-        "psr-4": {
-            "Modules\\": "modules/",
-        }
-    },
-   ```
-
-2. Install the package via Composer:
-   ```bash
-   composer require gigabait93/extensions
-   ```
-
-3. Publish the configuration file and migrations:
-   ```bash
-   php artisan vendor:publish --tag=extensions
-   ```
-
-4. Configure the `extensions` settings in the published configuration file.
-
-5. Run migrations to create the necessary database tables:
-   ```bash
-   php artisan migrate
-   ```
-
----
-
-### Commands
-
-| Command                         | Description                                                               |
-|---------------------------------|---------------------------------------------------------------------------|
-| `extension:list`                | Outputs a list of all installed extensions with their statuses and types. |
-| `extension:enable {extension}`  | Enables a specific extension.                                             |
-| `extension:disable {extension}` | Disables a specific extension.                                            |
-| `extension:delete {extension}`  | Deletes a specific extension.                                             |
-| `extension:discover`            | Scans the extensions directory and synchronizes new extensions.           |
-| `extension:install {extension}` | Installs a specific extension (migrate + seed).                           |
-| `extension:make {name}`         | Interactive creation of a new extension (type based on path).             |
-| `extension:stub {name}`         | Generates additional stubs for an existing extension.                     |
-| `extension:migrate {name?}`     | Runs migrations and seeders for extensions.                               |
-
-#### Command Usage Examples
-
-- `php artisan extension:list` – show all extensions.
-- `php artisan extension:enable Blog` – enable the "Blog" extension.
-- `php artisan extension:disable Blog` – disable the "Blog" extension.
-- `php artisan extension:delete Blog` – remove the "Blog" extension.
-- `php artisan extension:discover` – discover new extensions.
-- `php artisan extension:install Blog` – run migrations and seeds for "Blog".
-- `php artisan extension:make Blog modules` – scaffold a "Blog" extension in `modules`.
-- `php artisan extension:stub Blog modules` – generate stubs for the "Blog" extension.
-- `php artisan extension:migrate --force` – migrate all extensions without confirmation.
-
----
-
-### Configuration
-
-The package uses a configuration file (`config/extensions.php`) to define settings such as:
-
-- **Activator Type**: Choose between `DbActivator` or `FileActivator`.
-- **Extensions Paths**: Directories where extensions are stored.
-- **Protected Extensions**: Extensions that cannot be disabled or deleted.
-- **Load Order**: Specify the order in which extensions are loaded.
-- **Switchable Types**: Types where only one extension of the type can be active;
-  enabling one will automatically disable the others.
-
-Stub generation:
-- `extensions.stubs.path`: Root directory with stub templates.
-- `extensions.stubs.default`: Groups included by default when prompting.
-- `extensions.stubs.use`: Optional array of groups to use without prompting.
-- `extensions.stubs.prompt`: When false, uses `default` silently.
-
-Available stub groups include (not exhaustive): `extension`, `providers`, `config`, `events`, `http`, `routes`, `resources`, `console`, `models`, `lang`, `services`, `database`, `listeners`, `jobs`, `notifications`, `policies`, `rules`, `exceptions`.
-
----
-
-### How to Create an Extension
-
-1. Create a new directory for your extension in the `modules` folder or any other specified directory.
-    - Example: `modules/ExamplePlugin`
-2. Create a service provider for your extension.
-3. Create extension.json file in the root of your extension directory.
-    - Example: `modules/ExamplePlugin/extension.json`
-    ```json
-   {
-      "name": "Themer",
-      "provider": "Modules\\Themer\\Providers\\ThemeServiceProvider",
-      "type": "module"
-   }
-    ```
-4. Create a service provider class for your extension.
-    - Example: `modules/ExamplePlugin/Providers/ThemeServiceProvider.php`
-    ```php
-   namespace Modules\Themer\Providers;
-
-   use Illuminate\Support\ServiceProvider;
-
-   class ThemeServiceProvider extends ServiceProvider
-   {
-       public function register()
-       {
-           // Register your extension's services here
-       }
-
-       public function boot()
-       {
-           // Boot your extension's services here
-       }
-   }
-    ```
-
----
-
-### Extension Builder
-
-Extensions can also be scaffolded programmatically, which is useful for
-integration into a web interface. Use the `ExtensionBuilder` facade:
-
-```php
-use Gigabait93\Extensions\Facades\ExtensionBuilder;
-
-// Inspect available paths and stub groups
-$paths = ExtensionBuilder::paths();
-$groups = ExtensionBuilder::stubGroups();
-
-// Fluent configuration
-ExtensionBuilder::name('Blog')
-    ->in($paths[0])
-    ->addStub('migrations')
-    ->build();
-```
-
-By default, the extension is created in the first path defined in
-`extensions.paths`, using the configured stub groups. You may override the base
-path, stub groups or stub root as needed for full control.
-
----
-
-### Requirements
+## 📋 Requirements
 
 - PHP 8.3+
-- Laravel 12+
+- Laravel 12.0+
 
----
+## 🔧 Installation
 
-### License
+Install the package via Composer:
 
-This package is open-source and available under the MIT license.
+```bash
+composer require gigabait93/laravel-extensions
+```
+
+Publish the configuration file:
+
+```bash
+php artisan extensions:publish --tag=extensions-config
+```
+
+If using database activator, publish and run migrations:
+
+```bash
+php artisan extensions:publish --tag=extensions-migrations
+php artisan migrate
+```
+
+Discover existing extensions:
+
+```bash
+php artisan extensions:discover
+```
+
+## 🏗️ Extension Structure
+
+Extensions are organized in type-based directories:
+
+```
+extensions/
+├── Modules/
+│   ├── Blog/
+│   │   ├── extension.json
+│   │   ├── composer.json
+│   │   ├── helpers.php
+│   │   ├── Providers/
+│   │   │   └── BlogServiceProvider.php
+│   │   ├── Routes/
+│   │   │   ├── web.php
+│   │   │   └── api.php
+│   │   ├── Http/
+│   │   │   └── Controllers/
+│   │   ├── Models/
+│   │   ├── Database/
+│   │   │   ├── Migrations/
+│   │   │   └── Seeders/
+│   │   └── Resources/
+│   │       └── views/
+│   └── Shop/
+├── Themes/
+│   └── Admin/
+└── Plugins/
+    └── Analytics/
+```
+
+### Extension Manifest (extension.json)
+
+```json
+{
+  "id": "blog",
+  "name": "Blog",
+  "provider": "Modules\\Blog\\Providers\\BlogServiceProvider",
+  "type": "Modules",
+  "description": "Simple blog module",
+  "author": "John Doe",
+  "version": "1.0.0",
+  "compatible_with": "^12.0",
+  "requires_extensions": ["base"],
+  "requires_packages": {
+    "illuminate/support": "^12.0"
+  },
+  "meta": {
+    "category": "content"
+  }
+}
+```
+
+## 🎨 Usage
+
+### Basic Operations
+
+```php
+use Gigabait93\Extensions\Facades\Extensions;
+
+// Get all extensions
+$extensions = Extensions::all();
+
+// Get active extensions
+$active = Extensions::enabled();
+
+// Find specific extension
+$blog = Extensions::find('blog');
+
+// Get extension by ID
+$extension = Extensions::get('blog');
+
+// Enable extension
+Extensions::enable('blog');
+
+// Disable extension
+Extensions::disable('blog');
+
+// Install extension dependencies
+Extensions::installDependencies('blog');
+
+// Install dependencies and enable
+Extensions::installAndEnable('blog');
+```
+
+### Async Operations
+
+```php
+use Gigabait93\Extensions\Jobs\ExtensionEnableJob;
+use Gigabait93\Extensions\Jobs\ExtensionDisableJob;
+use Gigabait93\Extensions\Jobs\ExtensionInstallDepsJob;
+
+// Queue extension operations
+Extensions::enableAsync('blog');
+Extensions::disableAsync('shop');
+Extensions::installDepsAsync('analytics');
+Extensions::installAndEnableAsync('blog');
+```
+
+### Artisan Commands
+
+```bash
+# List all extensions
+php artisan extensions:list
+
+# Enable extension
+php artisan extensions:enable blog
+
+# Disable extension
+php artisan extensions:disable blog
+
+# Install dependencies
+php artisan extensions:install-deps blog
+
+# Create new extension
+php artisan extensions:make Blog --type=module
+
+# Migrate extensions
+php artisan extensions:migrate
+
+# Publish extension assets
+php artisan extensions:publish blog
+
+# Reload extensions cache
+php artisan extensions:reload
+```
+
+## 🎭 Events
+
+The package dispatches various events during extension lifecycle:
+
+```php
+use Gigabait93\Extensions\Events\{
+    ExtensionEnabledEvent,
+    ExtensionDisabledEvent,
+    ExtensionDiscoveredEvent,
+    ExtensionDeletedEvent,
+    ExtensionDepsInstalledEvent
+};
+
+// Listen to extension events
+Event::listen(ExtensionEnabledEvent::class, function ($event) {
+    logger()->info("Extension {$event->extension->name} was enabled");
+});
+
+Event::listen(ExtensionDisabledEvent::class, function ($event) {
+    logger()->info("Extension {$event->extension->name} was disabled");
+});
+```
+
+## ⚙️ Configuration
+
+Configure the package in `config/extensions.php`:
+
+```php
+return [
+    // Extensions that cannot be disabled
+    'protected' => [
+        'Modules' => 'ExtensionsDebugger',
+    ],
+
+    // Loading order for active extensions
+    'load_order' => [
+        'Modules' => 'ExtensionsDebugger',
+    ],
+
+    // Mutually exclusive extension types
+    'switch_types' => [
+        'Themes',
+    ],
+
+    // Extension directories by type
+    'paths' => [
+        'Modules' => base_path('extensions/Modules'),
+        'Themes' => base_path('extensions/Themes'),
+    ],
+
+    // Stub configuration for scaffolding
+    'stubs' => [
+        'path' => null, // Use package stubs
+        'default' => [
+            'config', 'console', 'database', 'events',
+            'exceptions', 'facades', 'helpers', 'http',
+            'jobs', 'lang', 'listeners', 'models',
+            'notifications', 'policies', 'resources',
+            'routes', 'rules', 'services',
+        ],
+    ],
+
+    // Activator class for managing states
+    'activator' => \Gigabait93\Extensions\Activators\FileActivator::class,
+
+    // JSON file path for FileActivator
+    'json_file' => base_path('storage/extensions.json'),
+];
+```
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+composer test
+```
+
+Run code style checks:
+
+```bash
+composer cs-check
+```
+
+Fix code style issues:
+
+```bash
+composer cs-fix
+```
+
+Run static analysis:
+
+```bash
+composer phpstan
+```
+
+## 📚 Documentation
+
+For detailed documentation, visit [https://gigabait93.github.io/laravel-extensions/](https://gigabait93.github.io/laravel-extensions/).
+
+The documentation covers:
+- Installation and configuration
+- Extension development
+- Manifest format reference
+- Event system
+- API reference
+- Best practices
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This package is open-sourced software licensed under the [MIT license](LICENSE).
+
+## 🙏 Credits
+
+- [GIGABAIT93](https://github.com/GIGABAIT93)
+- [All Contributors](../../contributors)
+
+## 🔧 Changelog
+
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+
+## 🛡️ Security
+
+If you discover any security related issues, please email xgigabaitx@gmail.com instead of using the issue tracker.

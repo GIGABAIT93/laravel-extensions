@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Http\Requests;
+namespace {{namespace}}\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -18,4 +18,3 @@ class {{name}}Request extends FormRequest
         ];
     }
 }
-

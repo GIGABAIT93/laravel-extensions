@@ -1,0 +1,6 @@
+{
+  "id": "sample",
+  "name": "Sample",
+  "provider": "Modules\\Sample\\Providers\\SampleServiceProvider",
+  "type": "Modules"
+}

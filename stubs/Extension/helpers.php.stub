@@ -1,0 +1,9 @@
+<?php
+
+if (! function_exists('{{snake}}_fn')) {
+    function {{snake}}_fn(): string
+    {
+        return '{{name}} helper works!';
+    }
+}
+

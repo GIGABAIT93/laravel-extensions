@@ -1,52 +1,105 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gigabait93\Extensions\Activators;
 
-use Gigabait93\Extensions\Contracts\ActivatorInterface;
-use Illuminate\Support\Facades\File;
+use Gigabait93\Extensions\Contracts\ActivatorContract;
 
-/**
- * JSON file-based implementation of ActivatorInterface.
- */
-class FileActivator implements ActivatorInterface
+class FileActivator implements ActivatorContract
 {
-    /**
-     * Path to JSON file storing activation statuses.
-     */
-    protected string $jsonFile;
+    private string $file;
 
-    /**
-     * Resolve storage path from configuration.
-     */
-    public function __construct()
+    private array $data = [];
+
+    public function __construct(?string $file = null)
     {
-        $config = config('extensions');
-        $this->jsonFile = $config['json_file'] ?? base_path('storage/extensions.json');
+        $this->file = $file ?? (string) config('extensions.json_file');
+        $this->load();
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getStatuses(): array
+    public function enable(string $id, ?string $type = null): void
     {
-        if (! File::exists($this->jsonFile)) {
-            return [];
+        $this->set($id, true, $type ?? ($this->data[$id]['type'] ?? null));
+        $this->save();
+    }
+
+    public function disable(string $id, ?string $type = null): void
+    {
+        $this->set($id, false, $type ?? ($this->data[$id]['type'] ?? null));
+        $this->save();
+    }
+
+    public function isEnabled(string $id): bool
+    {
+        return (bool) ($this->data[$id]['enabled'] ?? false);
+    }
+
+    public function remove(string $id): void
+    {
+        unset($this->data[$id]);
+        $this->save();
+    }
+
+    public function set(string $id, bool $enabled, ?string $type = null): void
+    {
+        $this->data[$id] = [
+            'enabled' => $enabled,
+            'type' => $type,
+        ];
+    }
+
+    public function statuses(): array
+    {
+        return $this->data;
+    }
+
+    private function load(): void
+    {
+        $file = $this->file;
+        if (!$file) {
+            return;
         }
-
-        $data = json_decode(File::get($this->jsonFile), true);
-
-        return is_array($data) ? $data : [];
+        if (!is_file($file)) {
+            return;
+        }
+        $fh = @fopen($file, 'r');
+        if ($fh === false) {
+            return;
+        }
+        @flock($fh, LOCK_SH);
+        $raw = stream_get_contents($fh) ?: '';
+        @flock($fh, LOCK_UN);
+        @fclose($fh);
+        if ($raw !== '') {
+            $json = json_decode($raw, true);
+            if (is_array($json)) {
+                $this->data = $json;
+            }
+        }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function setStatus(string $extension, bool $status): bool
+    private function save(): void
     {
-        $statuses = $this->getStatuses();
-        $statuses[$extension] = $status;
-        File::ensureDirectoryExists(dirname($this->jsonFile));
-
-        return File::put($this->jsonFile, json_encode($statuses, JSON_PRETTY_PRINT)) !== false;
+        $file = $this->file;
+        if (!$file) {
+            return;
+        }
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0o775, true);
+        }
+        $tmp = $file . '.tmp';
+        $contents = json_encode($this->data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $fh = @fopen($tmp, 'w');
+        if ($fh === false) {
+            return;
+        }
+        @flock($fh, LOCK_EX);
+        fwrite($fh, (string) $contents);
+        fflush($fh);
+        @flock($fh, LOCK_UN);
+        @fclose($fh);
+        @rename($tmp, $file);
     }
 }

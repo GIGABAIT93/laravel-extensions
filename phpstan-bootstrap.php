@@ -1,8 +1,10 @@
 <?php
+
 // Minimal helper stubs to make PHPStan happy without Larastan.
 
 if (!function_exists('config')) {
-    function config($key = null, $default = null) {
+    function config($key = null, $default = null)
+    {
         return $default;
     }
 }
@@ -11,6 +13,7 @@ if (!function_exists('base_path')) {
     function base_path(string $path = ''): string
     {
         $base = getcwd() ?: __DIR__;
+
         return rtrim($base, DIRECTORY_SEPARATOR) . ($path ? DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR) : '');
     }
 }
@@ -25,7 +28,7 @@ if (!function_exists('trans')) {
 if (!function_exists('app')) {
     function app($abstract = null, array $parameters = [])
     {
-        return new class {
+        return new class () {
             public function basePath(): string
             {
                 return base_path();

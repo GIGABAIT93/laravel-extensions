@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gigabait93\Extensions\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -14,11 +16,14 @@ class ExtensionStatus extends Model
     public $timestamps = false;
 
     protected $primaryKey = 'name';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
         'name',
+        'type',
         'enabled',
     ];
 }

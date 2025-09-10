@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Services;
+namespace {{namespace}}\Services;
 
 class {{name}}Service
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Providers;
+namespace {{namespace}}\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -8,7 +8,7 @@ class {{name}}ServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../Config/config.php', '{{snake}}');
+        // $this->mergeConfigFrom(__DIR__ . '/../Config/config.php', '{{snake}}');
     }
 
     public function boot(): void

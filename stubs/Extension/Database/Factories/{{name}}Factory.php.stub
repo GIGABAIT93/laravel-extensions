@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Database\Factories;
+namespace {{namespace}}\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -13,4 +13,3 @@ class {{name}}Factory extends Factory
         ];
     }
 }
-

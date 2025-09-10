@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('extensions', function (Blueprint $table) {
             $table->string('name')->primary();
+            $table->string('type')->nullable();
             $table->boolean('enabled')->default(false);
         });
     }

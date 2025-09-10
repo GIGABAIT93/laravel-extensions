@@ -1,0 +1,6 @@
+{
+  "id": "base",
+  "name": "Base",
+  "provider": "Modules\\Base\\Providers\\BaseServiceProvider",
+  "type": "Modules"
+}

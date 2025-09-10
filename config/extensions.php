@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     /*
@@ -9,7 +11,8 @@ return [
     | List of extensions that are forbidden to turn off or delete.
     */
     'protected' => [
-//        'Themer',
+        'Modules' => 'ExtensionsDebugger',
+
     ],
 
     /*
@@ -20,7 +23,7 @@ return [
     | The extensions that are not here will be downloaded in an arbitrary order after the list.
     */
     'load_order' => [
-//        'Themer',
+        'Modules' => 'ExtensionsDebugger',
     ],
 
     /*
@@ -32,7 +35,7 @@ return [
     | automatically disable the others of the same type.
     */
     'switch_types' => [
-        // 'theme',
+        'Themes',
     ],
 
     /*
@@ -43,7 +46,8 @@ return [
     | For example: [base_path('Extensions'), resource_path('extensions')]
     */
     'paths' => [
-        base_path('modules'),
+        'Modules' => base_path('extensions/Modules'),
+        'Themes' => base_path('extensions/Themes'),
     ],
 
     /*
@@ -54,28 +58,27 @@ return [
     | default when scaffolding a new extension.
     */
     'stubs' => [
-        'path' => base_path('vendor/gigabait93/laravel-extensions/stubs/Extension'),
-        // If you want to always use specific groups and skip prompts,
-        // set 'use' to an array of groups (e.g. ['extension','providers','http']).
-        // Leave null/empty to allow CLI selection.
-        'use' => null,
-        // When true, show interactive prompt to pick stub groups
-        // (ignored if 'use' is non-empty). When false, 'default' is used.
-        'prompt' => true,
+        // Package stubs are used by default; override to use custom templates
+        'path' => null,
         'default' => [
-            'extension',
-            'events',
-            'http',
-            'routes',
-            'resources',
-            'console',
-            'models',
-            'lang',
-            'services',
-            'facades',
             'config',
+            'console',
             'database',
-            'providers',
+            'events',
+            'exceptions',
+            'facades',
+            'helpers',
+            'http',
+            'jobs',
+            'lang',
+            'listeners',
+            'models',
+            'notifications',
+            'policies',
+            'resources',
+            'routes',
+            'rules',
+            'services',
         ],
     ],
 

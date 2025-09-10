@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Http\Controllers;
+namespace {{namespace}}\Http\Controllers;
 
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
@@ -12,4 +12,3 @@ class {{name}}Controller extends BaseController
         return view('{{snake}}::index');
     }
 }
-

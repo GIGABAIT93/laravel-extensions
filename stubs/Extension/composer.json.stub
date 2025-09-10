@@ -1,0 +1,7 @@
+{
+  "name": "extension/{{snake}}",
+  "type": "library",
+  "description": "Extension {{name}}",
+  "require": {
+  }
+}

@@ -1,7 +1,11 @@
 {
+  "id": "{{snake}}",
   "name": "{{name}}",
-  "provider": "{{namespace}}\\{{name}}\\Providers\\{{name}}ServiceProvider",
+  "description": "{{type}} {{name}}",
+  "provider": "{{namespace}}\\Providers\\{{name}}ServiceProvider",
   "type": "{{type}}",
   "version": "1.0.0",
-  "author": "GIGABAIT"
+  "compatible_with": "1.0.0",
+  "author": "GIGABAIT",
+  "requires_extensions": []
 }

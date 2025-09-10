@@ -1,0 +1,17 @@
+# Site settings for GitHub Pages
+# Using Just the Docs theme with dark mode
+
+remote_theme: just-the-docs/just-the-docs
+color_scheme: dark
+
+# Core metadata
+lang: en
+search_enabled: true
+
+# Site title and description
+name: Laravel Extensions
+description: "Modular extensions framework for Laravel"
+
+# Links
+aux_links:
+  "GitHub Repository": https://github.com/Gigabait93/laravel-extensions

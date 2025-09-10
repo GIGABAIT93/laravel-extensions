@@ -1,0 +1,6 @@
+{
+  "id": "beta",
+  "name": "Beta",
+  "provider": "Themes\\Beta\\Providers\\BetaServiceProvider",
+  "type": "Themes"
+}

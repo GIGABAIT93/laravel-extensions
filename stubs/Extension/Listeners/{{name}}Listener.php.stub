@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Listeners;
+namespace {{namespace}}\Listeners;
 
 class {{name}}Listener
 {
@@ -9,4 +9,3 @@ class {{name}}Listener
         //
     }
 }
-

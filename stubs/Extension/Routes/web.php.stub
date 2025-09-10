@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use {{namespace}}\{{name}}\Http\Controllers\{{name}}Controller;
+use {{namespace}}\Http\Controllers\{{name}}Controller;
 
 Route::middleware('web')
     ->prefix('{{snake}}')
@@ -9,4 +9,3 @@ Route::middleware('web')
     ->group(function () {
         Route::get('/', [{{name}}Controller::class, 'index'])->name('index');
     });
-

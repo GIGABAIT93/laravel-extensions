@@ -1,0 +1,7 @@
+{
+  "id": "addon",
+  "name": "Addon",
+  "provider": "Modules\\Addon\\Providers\\AddonServiceProvider",
+  "type": "Modules",
+  "requires_extensions": ["base"]
+}

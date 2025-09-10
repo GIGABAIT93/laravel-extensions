@@ -1,6 +1,6 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Notifications;
+namespace {{namespace}}\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -22,4 +22,3 @@ class {{name}}Notification extends Notification
             ->line('This is a notification from the {{name}} extension.');
     }
 }
-

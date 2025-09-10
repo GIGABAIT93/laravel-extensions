@@ -1,0 +1,6 @@
+{
+  "id": "alpha",
+  "name": "Alpha",
+  "provider": "Themes\\Alpha\\Providers\\AlphaServiceProvider",
+  "type": "Themes"
+}

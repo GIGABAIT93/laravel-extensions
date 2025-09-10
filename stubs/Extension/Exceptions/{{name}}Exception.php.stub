@@ -1,10 +1,9 @@
 <?php
 
-namespace {{namespace}}\{{name}}\Exceptions;
+namespace {{namespace}}\Exceptions;
 
 use Exception;
 
 class {{name}}Exception extends Exception
 {
 }
-
