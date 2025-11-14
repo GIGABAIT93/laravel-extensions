@@ -64,3 +64,4 @@ yarn-error.log*
 *.tmp
 *.temp
 .claude/
+/.php-cs-fixer.cache
