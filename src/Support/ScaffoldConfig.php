@@ -17,7 +17,10 @@ final class ScaffoldConfig
     {
         $path = config('extensions.stubs.path');
         if (!$path) {
-            $path = base_path('vendor/gigabait93/laravel-extensions/stubs/Extension');
+            $vendorPath = base_path('vendor/gigabait93/laravel-extensions/stubs/Extension');
+            $path = is_dir($vendorPath)
+                ? $vendorPath
+                : dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'Extension';
         }
 
         return rtrim((string) $path, DIRECTORY_SEPARATOR);

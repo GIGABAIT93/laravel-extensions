@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Gigabait93\Extensions\Activators;
 
 use Gigabait93\Extensions\Contracts\ActivatorContract;
+use Illuminate\Support\Facades\Log;
 
 class FileActivator implements ActivatorContract
 {
     private string $file;
 
     private array $data = [];
+
+    private ?int $lastLoadedMtime = null;
 
     public function __construct(?string $file = null)
     {
@@ -20,23 +23,28 @@ class FileActivator implements ActivatorContract
 
     public function enable(string $id, ?string $type = null): void
     {
+        $this->refreshIfChanged();
         $this->set($id, true, $type ?? ($this->data[$id]['type'] ?? null));
         $this->save();
     }
 
     public function disable(string $id, ?string $type = null): void
     {
+        $this->refreshIfChanged();
         $this->set($id, false, $type ?? ($this->data[$id]['type'] ?? null));
         $this->save();
     }
 
     public function isEnabled(string $id): bool
     {
+        $this->refreshIfChanged();
+
         return (bool) ($this->data[$id]['enabled'] ?? false);
     }
 
     public function remove(string $id): void
     {
+        $this->refreshIfChanged();
         unset($this->data[$id]);
         $this->save();
     }
@@ -51,7 +59,26 @@ class FileActivator implements ActivatorContract
 
     public function statuses(): array
     {
+        $this->refreshIfChanged();
+
         return $this->data;
+    }
+
+    private function refreshIfChanged(): void
+    {
+        $file = $this->file;
+        if ($file === '' || !is_file($file)) {
+            return;
+        }
+
+        $mtime = @filemtime($file);
+        if ($mtime === false) {
+            return;
+        }
+
+        if ($this->lastLoadedMtime === null || $mtime !== $this->lastLoadedMtime) {
+            $this->load();
+        }
     }
 
     private function load(): void
@@ -65,9 +92,13 @@ class FileActivator implements ActivatorContract
         }
         $fh = @fopen($file, 'r');
         if ($fh === false) {
+            Log::warning('FileActivator failed to open state file for reading', ['file' => $file]);
+
             return;
         }
-        @flock($fh, LOCK_SH);
+        if (!@flock($fh, LOCK_SH)) {
+            Log::warning('FileActivator failed to acquire shared lock', ['file' => $file]);
+        }
         $raw = stream_get_contents($fh) ?: '';
         @flock($fh, LOCK_UN);
         @fclose($fh);
@@ -75,8 +106,13 @@ class FileActivator implements ActivatorContract
             $json = json_decode($raw, true);
             if (is_array($json)) {
                 $this->data = $json;
+            } else {
+                Log::warning('FileActivator state file contains invalid JSON', ['file' => $file]);
             }
         }
+
+        $mtime = @filemtime($file);
+        $this->lastLoadedMtime = $mtime === false ? null : $mtime;
     }
 
     private function save(): void
@@ -91,15 +127,41 @@ class FileActivator implements ActivatorContract
         }
         $tmp = $file . '.tmp';
         $contents = json_encode($this->data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        $fh = @fopen($tmp, 'w');
-        if ($fh === false) {
+        if ($contents === false) {
+            Log::warning('FileActivator failed to encode statuses to JSON', ['file' => $file]);
+
             return;
         }
-        @flock($fh, LOCK_EX);
-        fwrite($fh, (string) $contents);
+        $fh = @fopen($tmp, 'w');
+        if ($fh === false) {
+            Log::warning('FileActivator failed to open temp file for writing', ['file' => $tmp]);
+
+            return;
+        }
+        if (!@flock($fh, LOCK_EX)) {
+            Log::warning('FileActivator failed to acquire exclusive lock', ['file' => $tmp]);
+        }
+        if (fwrite($fh, (string) $contents) === false) {
+            Log::warning('FileActivator failed to write statuses', ['file' => $tmp]);
+            @fclose($fh);
+            @unlink($tmp);
+
+            return;
+        }
         fflush($fh);
         @flock($fh, LOCK_UN);
         @fclose($fh);
-        @rename($tmp, $file);
+        if (!@rename($tmp, $file)) {
+            Log::warning('FileActivator failed to move temp file to destination', [
+                'tmp' => $tmp,
+                'file' => $file,
+            ]);
+            @unlink($tmp);
+
+            return;
+        }
+
+        $mtime = @filemtime($file);
+        $this->lastLoadedMtime = $mtime === false ? null : $mtime;
     }
 }

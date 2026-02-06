@@ -28,6 +28,10 @@ class DependencyService
     {
         $missing = [];
         foreach ($manifest->requires_packages as $pkg => $constraint) {
+            if ($this->isPlatformPackage($pkg)) {
+                continue;
+            }
+
             if (!class_exists(InstalledVersions::class)) {
                 // Composer runtime API not available; cannot verify — assume missing
                 $missing[] = $pkg;
@@ -39,5 +43,18 @@ class DependencyService
         }
 
         return $missing;
+    }
+
+    private function isPlatformPackage(string $package): bool
+    {
+        $package = strtolower(trim($package));
+
+        if ($package === '' || $package === 'php') {
+            return true;
+        }
+
+        return str_starts_with($package, 'ext-')
+            || str_starts_with($package, 'lib-')
+            || str_starts_with($package, 'composer-');
     }
 }

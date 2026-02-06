@@ -13,7 +13,11 @@ use function Laravel\Prompts\table;
  */
 class ListCommand extends BaseCommand
 {
-    protected $signature = 'extensions:list {--type= : Filter by extension type} {--enabled : Show only enabled extensions} {--disabled : Show only disabled extensions} {--plain : Output without formatting}';
+    protected $signature = 'extensions:list {--type= : Filter by extension type}
+                            {--enabled : Show only enabled extensions}
+                            {--disabled : Show only disabled extensions}
+                            {--json : Output as JSON}
+                            {--plain : Output without formatting}';
 
     protected $description = 'Display registered extensions with optional filters';
 
@@ -22,6 +26,12 @@ class ListCommand extends BaseCommand
         $type = (string) ($this->option('type') ?? '');
         $enabled = (bool) $this->option('enabled');
         $disabled = (bool) $this->option('disabled');
+
+        if ($enabled && $disabled) {
+            $this->error(__('extensions::lang.enabled_disabled_conflict'));
+
+            return self::FAILURE;
+        }
 
         if ($type === '' && !$enabled && !$disabled) {
             $type = $this->selectTypeInteractively($extensions, '');
@@ -50,6 +60,28 @@ class ListCommand extends BaseCommand
                 $e->version(),
             ];
         })->all();
+
+        if ($this->isJsonOutput()) {
+            $payload = [
+                'filters' => [
+                    'type' => $type,
+                    'enabled' => $enabled,
+                    'disabled' => $disabled,
+                ],
+                'items' => array_map(static fn (array $r): array => [
+                    'name' => $r[0],
+                    'id' => $r[1],
+                    'type' => $r[2],
+                    'status' => $r[3],
+                    'version' => $r[4],
+                ], $rows),
+                'count' => count($rows),
+            ];
+
+            $this->line((string) json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return self::SUCCESS;
+        }
 
         $interactive = $this->isInteractive();
         if ($interactive) {

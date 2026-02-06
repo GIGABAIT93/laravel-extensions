@@ -49,7 +49,7 @@ readonly class OpResult
         return json_encode($this->toArray(), JSON_PRETTY_PRINT);
     }
 
-    public function getData(string $key = null, mixed $default = null): mixed
+    public function getData(?string $key = null, mixed $default = null): mixed
     {
         if ($key === null) {
             return $this->data;

@@ -62,9 +62,25 @@ class PathResolver
      */
     public static function getProviderPath(string $extensionPath, string $providerNamespace): string
     {
-        $providerPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $providerNamespace) . '.php';
+        $extensionPath = rtrim($extensionPath, DIRECTORY_SEPARATOR);
+        $providerPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, trim($providerNamespace, '\\/')) . '.php';
+        $fullNamespacePath = $extensionPath . DIRECTORY_SEPARATOR . $providerPath;
 
-        return rtrim($extensionPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $providerPath;
+        if (file_exists($fullNamespacePath)) {
+            return $fullNamespacePath;
+        }
+
+        $segments = preg_split('/[\\\\\/]+/', trim($providerNamespace, '\\/')) ?: [];
+        if (count($segments) > 2) {
+            $trimmed = implode(DIRECTORY_SEPARATOR, array_slice($segments, 2)) . '.php';
+            $trimmedPath = $extensionPath . DIRECTORY_SEPARATOR . $trimmed;
+
+            if (file_exists($trimmedPath)) {
+                return $trimmedPath;
+            }
+        }
+
+        return $fullNamespacePath;
     }
 
     /**

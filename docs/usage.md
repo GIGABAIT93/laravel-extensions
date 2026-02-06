@@ -60,8 +60,10 @@ Extensions::installDepsQueued('shop');       // Legacy alias for installDepsAsyn
 
 > All enable/disable logic flows through the service to enforce
 > dependencies, switch types and protection rules.
+> Operation status is persisted in DB by default (see `extensions.operations` config).
 
-All routes return JSON responses describing the action result.
+If you expose these operations via your own controller/UI layer, return the
+`OpResult` payload as JSON for consistent client-side handling.
 
 ### Operation Insights
 ```php
@@ -107,14 +109,17 @@ structured `OpResult` objects describing success or failure:
 
 ```bash
 php artisan extensions:list {--type=} {--enabled} {--disabled}
+php artisan extensions:list {--json}
 php artisan extensions:discover
-php artisan extensions:enable {id?} {--type=} {--all}
-php artisan extensions:disable {id?} {--type=} {--all}
-php artisan extensions:install-deps {id?} {--type=} {--all}
+php artisan extensions:enable {id?} {--ids=} {--type=} {--all} {--queue}
+php artisan extensions:disable {id?} {--ids=} {--type=} {--all} {--queue}
+php artisan extensions:install-deps {id?} {--ids=} {--type=} {--all} {--queue}
 php artisan extensions:reload-active
-php artisan extensions:migrate {id?} {--type=} {--all}
-php artisan extensions:delete {id?} {--type=} {--all}
-php artisan extensions:publish {--tag=} {--force}
+php artisan extensions:migrate {id?} {--ids=} {--type=} {--all}
+php artisan extensions:delete {id?} {--ids=} {--type=} {--all} {--force}
+php artisan extensions:publish {--tag=} {--force} {--json}
+php artisan extensions:bulk {enable|disable} {--ids=} {--type=} {--author=} {--queue} {--force}
+php artisan extensions:make {name?} {--type=} {--groups=*} {--all-groups} {--json}
 ```
 
 Use `php artisan help extensions:enable` to read command-specific help.

@@ -19,6 +19,7 @@ class PublishCommand extends BaseCommand
     protected $signature = 'extensions:publish '
         . '{--tag= : Publish tag [extensions|extensions-config|extensions-migrations|extensions-lang|extensions-stubs]} '
         . '{--force : Overwrite existing files} '
+        . '{--json : Output as JSON} '
         . '{--plain : Output without formatting}';
 
     protected $description = 'Publish package configuration, migrations, translations and stubs';
@@ -27,6 +28,7 @@ class PublishCommand extends BaseCommand
     {
         $tag = (string) ($this->option('tag') ?? '');
         $force = (bool) $this->option('force');
+        $allowedTags = ['extensions', 'extensions-config', 'extensions-migrations', 'extensions-lang', 'extensions-stubs'];
 
         $interactive = $this->isInteractive();
         if ($tag === '' && $interactive) {
@@ -42,15 +44,38 @@ class PublishCommand extends BaseCommand
             $tag = 'extensions';
         }
 
+        if (!in_array($tag, $allowedTags, true)) {
+            $this->error(__('extensions::lang.invalid_publish_tag', ['tag' => $tag, 'allowed' => implode(', ', $allowedTags)]));
+
+            return self::FAILURE;
+        }
+
         // Use Laravel's built-in vendor:publish command
-        $this->call('vendor:publish', [
+        $exitCode = $this->call('vendor:publish', [
             '--tag' => $tag,
             '--force' => $force,
             '--provider' => 'Gigabait93\Extensions\Providers\ExtensionsServiceProvider',
         ]);
 
-        info(__('extensions::lang.published_tag', ['tag' => $tag]));
+        if ($this->isJsonOutput()) {
+            $this->line((string) json_encode([
+                'success' => $exitCode === self::SUCCESS,
+                'tag' => $tag,
+                'force' => $force,
+                'exit_code' => $exitCode,
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-        return self::SUCCESS;
+            return $exitCode;
+        }
+
+        if ($exitCode === self::SUCCESS) {
+            info(__('extensions::lang.published_tag', ['tag' => $tag]));
+
+            return self::SUCCESS;
+        }
+
+        $this->error(__('extensions::lang.publish_failed', ['tag' => $tag]));
+
+        return self::FAILURE;
     }
 }

@@ -84,4 +84,18 @@ class ExtensionServiceAsyncTest extends TestCase
         $op = $tracker->getOperation($opId);
         $this->assertTrue($op['context']['auto_enable']);
     }
+
+    public function test_enable_async_reuses_pending_operation_id(): void
+    {
+        Bus::fake();
+        Cache::flush();
+
+        $service = $this->app->make(ExtensionService::class);
+        $first = $service->enableAsync('sample');
+        $second = $service->enableAsync('sample');
+
+        $this->assertSame($first, $second);
+
+        Bus::assertDispatchedTimes(ExtensionEnableJob::class, 1);
+    }
 }

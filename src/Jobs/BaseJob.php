@@ -11,6 +11,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +26,19 @@ abstract class BaseJob implements ShouldQueue
         public readonly string $extensionId,
         public readonly string $operationId,
     ) {
+    }
+
+    public function middleware(): array
+    {
+        $lockSeconds = (int) config('extensions.queue.overlap_lock_seconds', 300);
+        $releaseAfter = (int) config('extensions.queue.overlap_release_seconds', 5);
+
+        return [
+            (new WithoutOverlapping('extensions:job:' . $this->extensionId))
+                ->expireAfter($lockSeconds)
+                ->releaseAfter($releaseAfter)
+                ->shared(),
+        ];
     }
 
     public function handle(ExtensionService $extensions, TrackerService $tracker): void

@@ -19,17 +19,21 @@ class BulkCommand extends BaseCommand
                             {--ids= : Comma-separated list of extension IDs}
                             {--type= : Apply to all extensions of this type}
                             {--author= : Apply to all extensions by this author}
-                            {--force : Skip confirmation}';
+                            {--queue : Run as queued operations}
+                            {--force : Skip confirmation}
+                            {--json : Output as JSON}
+                            {--plain : Output without formatting}';
 
     protected $description = 'Perform bulk operations on multiple extensions';
 
     public function handle(ExtensionService $extensions): int
     {
-        $operation = $this->argument('operation');
-        $ids = $this->option('ids');
+        $operation = strtolower((string) $this->argument('operation'));
+        $ids = $this->parseIdsOption($this->option('ids'));
         $type = $this->option('type');
         $author = $this->option('author');
-        $force = $this->option('force');
+        $force = (bool) $this->option('force');
+        $queue = (bool) $this->option('queue');
 
         if (!in_array($operation, ['enable', 'disable'])) {
             $this->components->error('Operation must be either "enable" or "disable"');
@@ -37,16 +41,33 @@ class BulkCommand extends BaseCommand
             return self::FAILURE;
         }
 
+        $selectorCount = 0;
+        $selectorCount += !empty($ids) ? 1 : 0;
+        $selectorCount += (is_string($type) && $type !== '') ? 1 : 0;
+        $selectorCount += (is_string($author) && $author !== '') ? 1 : 0;
+
+        if ($selectorCount > 1) {
+            $this->error(__('extensions::lang.bulk_selector_conflict'));
+
+            return self::FAILURE;
+        }
+
         // Collect target extension IDs
         $targetIds = [];
 
-        if ($ids) {
-            $targetIds = array_map('trim', explode(',', $ids));
+        if (!empty($ids)) {
+            $targetIds = $this->uniqueIds($ids);
         } elseif ($type) {
             $targetIds = $extensions->allByType($type)->pluck('id')->toArray();
         } elseif ($author) {
             $targetIds = $extensions->findByAuthor($author)->pluck('id')->toArray();
         } else {
+            if (!$this->isInteractive()) {
+                $this->error(__('extensions::lang.bulk_requires_selector_non_interactive'));
+
+                return self::FAILURE;
+            }
+
             // Interactive selection
             $allExtensions = $extensions->all();
             $choices = $allExtensions->mapWithKeys(function ($extension) {
@@ -82,6 +103,7 @@ class BulkCommand extends BaseCommand
                 return $ext && $ext->isEnabled();
             });
         }
+        $targetIds = array_values($targetIds);
 
         if (empty($targetIds)) {
             $this->components->info("No extensions need to be {$operation}d.");
@@ -91,6 +113,12 @@ class BulkCommand extends BaseCommand
 
         // Confirmation
         if (!$force) {
+            if (!$this->isInteractive()) {
+                $this->error(__('extensions::lang.bulk_force_required_non_interactive'));
+
+                return self::FAILURE;
+            }
+
             $confirmed = confirm(
                 label: "Are you sure you want to {$operation} " . count($targetIds) . ' extension(s)?',
                 default: false
@@ -104,29 +132,55 @@ class BulkCommand extends BaseCommand
         }
 
         // Perform bulk operation
-        $this->components->info("Performing bulk {$operation} on " . count($targetIds) . ' extension(s)...');
-
-        if ($operation === 'enable') {
-            $results = $extensions->enableMultiple($targetIds);
-        } else {
-            $results = $extensions->disableMultiple($targetIds);
-        }
-
-        // Report results
         $successful = 0;
         $failed = 0;
+        $rows = [];
 
-        foreach ($results as $id => $result) {
-            if ($result->isSuccess()) {
-                $successful++;
-                $this->line("<fg=green>✓</> {$id}: {$result->message}");
-            } else {
+        if (!$this->isJsonOutput()) {
+            $this->components->info("Performing bulk {$operation} on " . count($targetIds) . ' extension(s)...');
+        }
+
+        foreach ($targetIds as $id) {
+            try {
+                if ($queue) {
+                    $opId = $operation === 'enable'
+                        ? $extensions->enableAsync($id)
+                        : $extensions->disableAsync($id);
+
+                    $rows[] = [$id, __('extensions::lang.queued_operation', ['id' => $opId])];
+                    $successful++;
+                    continue;
+                }
+
+                $result = $operation === 'enable'
+                    ? $extensions->enable($id)
+                    : $extensions->disable($id);
+
+                if ($result->isSuccess()) {
+                    $successful++;
+                    $rows[] = [$id, $result->message ?? __('extensions::lang.success')];
+                    continue;
+                }
+
                 $failed++;
-                $this->line("<fg=red>✗</> {$id}: {$result->message}");
+                $rows[] = [$id, $result->message ?? __('extensions::lang.failed')];
+            } catch (\Throwable $e) {
+                $failed++;
+                $rows[] = [$id, __('extensions::lang.failed') . ': ' . $e->getMessage()];
             }
         }
 
-        $this->components->info("Bulk operation completed. Success: {$successful}, Failed: {$failed}");
+        $this->displayResults($rows, $this->isInteractive(), [
+            'operation' => $operation,
+            'mode' => $queue ? 'queue' : 'sync',
+            'total' => count($targetIds),
+            'successful' => $successful,
+            'failed' => $failed,
+        ]);
+
+        if (!$this->isJsonOutput()) {
+            $this->components->info("Bulk operation completed. Success: {$successful}, Failed: {$failed}");
+        }
 
         return $failed === 0 ? self::SUCCESS : self::FAILURE;
     }

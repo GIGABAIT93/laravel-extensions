@@ -14,7 +14,8 @@ class ExtensionInstallDepsJob extends BaseJob
     protected function executeJob(ExtensionService $extensions, TrackerService $tracker): void
     {
         $operation = $tracker->getOperation($this->operationId);
-        $autoEnable = $operation['context']['auto_enable'] ?? false;
+        $context = is_array($operation) ? ($operation['context'] ?? []) : [];
+        $autoEnable = (bool) ($context['auto_enable'] ?? false);
 
         $result = $extensions->installDependencies($this->extensionId);
 

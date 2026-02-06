@@ -97,4 +97,46 @@ return [
     |--------------------------------------------------------------------------
     */
     'json_file' => base_path('storage/extensions.json'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Composer Integration
+    |--------------------------------------------------------------------------
+    | Configure how dependency installation for extensions is executed.
+    | `command` may be "composer" or a full command like "php composer.phar".
+    */
+    'composer' => [
+        'command' => 'composer',
+        'timeout' => 300,
+        'lock_wait_seconds' => 15,
+        'lock_seconds' => 330,
+        'prefer_dist' => true,
+        'no_dev' => false,
+        'root_json' => base_path('composer.json'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Overlap Protection
+    |--------------------------------------------------------------------------
+    | Prevent concurrent operations for the same extension in queued jobs.
+    */
+    'queue' => [
+        'overlap_lock_seconds' => 300,
+        'overlap_release_seconds' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Operations Store
+    |--------------------------------------------------------------------------
+    | Async operation statuses are persisted in DB by default. If migrations are
+    | not applied yet, the tracker falls back to cache automatically.
+    */
+    'operations' => [
+        'store' => 'database',
+        'retention_hours' => 168,
+        'prune_interval_seconds' => 300,
+        'cache_ttl_hours' => 2,
+    ],
 ];

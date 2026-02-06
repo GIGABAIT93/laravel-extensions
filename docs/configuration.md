@@ -51,6 +51,53 @@ php artisan migrate
 ## JSON File Storage
 When using `FileActivator`, the `json_file` option sets the path where activation states are stored.
 
+## Composer Integration (UI-friendly dependency install)
+The `composer` block controls how extension dependencies are installed when you call
+`installDependencies`, `install`, or `installAndEnable` from service/API/queue jobs.
+
+```php
+'composer' => [
+    'command' => 'composer',
+    'timeout' => 300,
+    'lock_wait_seconds' => 15,
+    'lock_seconds' => 330,
+    'prefer_dist' => true,
+    'no_dev' => false,
+    'root_json' => base_path('composer.json'),
+],
+```
+
+Notes:
+- Dependency installation now runs targeted updates for missing packages only.
+- A cache lock prevents concurrent composer runs from overlapping queue jobs.
+- The package validates merge-plugin readiness before attempting installation.
+
+## Queue Overlap Protection
+The `queue` block prevents concurrent operations on the same extension id:
+
+```php
+'queue' => [
+    'overlap_lock_seconds' => 300,
+    'overlap_release_seconds' => 5,
+],
+```
+
+## Persistent Operations Store
+Async operation tracking is persisted in the database by default:
+
+```php
+'operations' => [
+    'store' => 'database',
+    'retention_hours' => 168,
+    'prune_interval_seconds' => 300,
+    'cache_ttl_hours' => 2,
+],
+```
+
+Notes:
+- `store=database` keeps operation history across restarts and deployments.
+- old operation records are automatically pruned by retention settings.
+- if migrations are not yet applied, tracker safely falls back to cache.
+
 Review the source config for inline comments describing each option in
 detail.
-

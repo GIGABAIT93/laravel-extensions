@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Gigabait93\Extensions\Tests;
 
 use Gigabait93\Extensions\Contracts\ActivatorContract;
+use Gigabait93\Extensions\Events\ExtensionDiscoveredEvent;
 use Gigabait93\Extensions\Services\BootstrapService;
 use Gigabait93\Extensions\Services\ExtensionService;
+use Gigabait93\Extensions\Services\RegistryService;
+use Gigabait93\Extensions\Support\ManifestValue;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 
 class ExtensionServiceTest extends TestCase
@@ -27,6 +31,16 @@ class ExtensionServiceTest extends TestCase
         foreach ($service->all() as $ext) {
             $this->assertNotEmpty($ext->provider);
         }
+    }
+
+    public function test_discover_dispatches_event_for_each_manifest(): void
+    {
+        Event::fake([ExtensionDiscoveredEvent::class]);
+
+        $service = $this->app->make(ExtensionService::class);
+        $service->discover();
+
+        Event::assertDispatchedTimes(ExtensionDiscoveredEvent::class, 5);
     }
 
     public function test_enable_marks_extension_as_enabled(): void
@@ -273,5 +287,33 @@ class ExtensionServiceTest extends TestCase
         $this->assertDirectoryExists(__DIR__ . '/fixtures/extensions/Themes/Alpha');
 
         File::deleteDirectory(self::$alphaBackup);
+    }
+
+    public function test_delete_rejects_paths_outside_configured_roots(): void
+    {
+        $tmp = sys_get_temp_dir() . '/ext_outside_' . uniqid();
+        File::makeDirectory($tmp, 0o777, true);
+
+        try {
+            $registry = $this->app->make(RegistryService::class);
+            $registry->setManifests([
+                new ManifestValue(
+                    id: 'outside',
+                    name: 'Outside',
+                    provider: 'Outside\\Providers\\OutsideServiceProvider',
+                    path: $tmp,
+                    type: 'Modules'
+                ),
+            ]);
+
+            $service = $this->app->make(ExtensionService::class);
+            $result = $service->delete('outside');
+
+            $this->assertFalse($result->isSuccess());
+            $this->assertSame('unsafe_path', $result->errorCode);
+            $this->assertDirectoryExists($tmp);
+        } finally {
+            File::deleteDirectory($tmp);
+        }
     }
 }

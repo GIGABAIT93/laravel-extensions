@@ -13,14 +13,35 @@ use function Laravel\Prompts\info;
  */
 class ReloadCommand extends BaseCommand
 {
-    protected $signature = 'extensions:reload-active {--plain : Output without formatting}';
+    protected $signature = 'extensions:reload-active {--json : Output as JSON} {--plain : Output without formatting}';
 
     protected $description = 'Rediscover and reload active extensions';
 
     public function handle(ExtensionService $extensions): int
     {
-        $extensions->discover();
+        $discover = $extensions->discover();
+        if ($discover->isFailure()) {
+            if ($this->isJsonOutput()) {
+                $this->line((string) json_encode($discover->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            } else {
+                $this->error($discover->message ?? __('extensions::lang.discovery_failed'));
+            }
+
+            return self::FAILURE;
+        }
+
         $extensions->reloadActive();
+
+        if ($this->isJsonOutput()) {
+            $this->line((string) json_encode([
+                'success' => true,
+                'message' => __('extensions::lang.active_reloaded'),
+                'discover' => $discover->toArray(),
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return self::SUCCESS;
+        }
+
         info(__('extensions::lang.active_reloaded'));
 
         return self::SUCCESS;

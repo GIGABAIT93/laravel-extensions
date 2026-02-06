@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gigabait93\Extensions\Scaffolding;
 
+use DateTimeImmutable;
 use Gigabait93\Extensions\Services\RegistryService;
 use Gigabait93\Extensions\Support\ScaffoldConfig;
 use Illuminate\Filesystem\Filesystem;
@@ -35,6 +36,8 @@ class ExtensionBuilder
 
     /** @var string[] groups that are always generated */
     private array $mandatoryGroups = [];
+
+    private int $migrationSequence = 0;
 
     public function withType(string $type): self
     {
@@ -85,18 +88,15 @@ class ExtensionBuilder
      */
     public function build(): array
     {
+        $this->migrationSequence = 0;
+
         [$type, $name, $namespace] = $this->resolveNames();
         $base = $this->resolveBasePath($type);
         $stubs = $this->resolveStubsPath();
         $targetRoot = rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $name;
 
-        if ($this->files->exists($targetRoot)) {
-            if (!$this->force) {
-                throw new \RuntimeException(__('extensions::lang.extension_exists', ['name' => $name, 'path' => $targetRoot]));
-            }
-        } else {
-            $this->files->makeDirectory($targetRoot, 0o775, true);
-        }
+        $this->ensureDirectory($base);
+        $this->prepareTargetRoot($targetRoot, $name);
 
         $created = [];
         $selected = array_map('strtolower', $this->groups);
@@ -110,13 +110,11 @@ class ExtensionBuilder
             [$outRel, $content] = $this->renderStub($rel, $abs, $type, $name, $namespace);
             $outPath = $targetRoot . DIRECTORY_SEPARATOR . $outRel;
             $outDir = dirname($outPath);
-            if (!$this->files->isDirectory($outDir)) {
-                $this->files->makeDirectory($outDir, 0o775, true);
-            }
+            $this->ensureDirectory($outDir);
             if ($this->files->exists($outPath) && !$this->force) {
                 continue; // skip existing unless forcing
             }
-            $this->files->put($outPath, $content);
+            $this->writeFile($outPath, $content);
             $created[] = $outRel;
         }
 
@@ -129,8 +127,20 @@ class ExtensionBuilder
 
     private function resolveNames(): array
     {
-        $type = $this->type !== '' ? $this->canonicalType($this->type) : $this->type;
-        $studlyName = Str::studly($this->name);
+        $type = trim($this->type);
+        if ($type === '') {
+            throw new \RuntimeException(__('extensions::lang.type_required'));
+        }
+        $type = $this->canonicalType($type);
+
+        $studlyName = Str::studly(trim($this->name));
+        if ($studlyName === '') {
+            throw new \RuntimeException(__('extensions::lang.name_required'));
+        }
+        if (!preg_match('/^[A-Za-z][A-Za-z0-9_]*$/', $studlyName)) {
+            throw new \RuntimeException(__('extensions::lang.invalid_extension_name', ['name' => $studlyName]));
+        }
+
         $namespace = ($type !== '' ? $type . '\\' : '') . $studlyName;
 
         return [$type, $studlyName, $namespace];
@@ -139,7 +149,7 @@ class ExtensionBuilder
     private function resolveBasePath(string $type): string
     {
         if (is_string($this->basePath) && $this->basePath !== '') {
-            return rtrim($this->basePath, DIRECTORY_SEPARATOR);
+            return rtrim((string) $this->basePath, DIRECTORY_SEPARATOR);
         }
         $path = $this->registry->pathForType($type);
         if (!$path) {
@@ -152,7 +162,7 @@ class ExtensionBuilder
     private function resolveStubsPath(): string
     {
         $path = $this->stubsPath ?? ScaffoldConfig::stubsPath();
-        if (!is_dir($path)) {
+        if (!is_dir($path) || !is_readable($path)) {
             throw new \RuntimeException(__('extensions::lang.stubs_path_invalid', ['path' => $path]));
         }
 
@@ -164,6 +174,7 @@ class ExtensionBuilder
     {
         $root = rtrim($root, DIRECTORY_SEPARATOR);
         $rii = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
+        $collected = [];
         /** @var \SplFileInfo $file */
         foreach ($rii as $file) {
             if (!$file->isFile()) {
@@ -174,7 +185,14 @@ class ExtensionBuilder
             if (!str_ends_with($rel, '.stub')) {
                 continue;
             }
-            yield $rel => $file->getPathname();
+
+            $collected[$rel] = $file->getPathname();
+        }
+
+        ksort($collected, SORT_NATURAL | SORT_FLAG_CASE);
+
+        foreach ($collected as $rel => $path) {
+            yield $rel => $path;
         }
     }
 
@@ -184,7 +202,7 @@ class ExtensionBuilder
         $snake = Str::snake($name);
         $snakePlural = Str::snake(Str::pluralStudly($name));
 
-        $content = file_get_contents($abs) ?: '';
+        $content = $this->files->get($abs);
         $namespaceReplace = $namespace;
         if (str_ends_with($rel, '.json.stub')) {
             // Escape backslashes for JSON strings
@@ -205,7 +223,7 @@ class ExtensionBuilder
         // special-case migrations filename convention (normalize separators for portability)
         $normRel = str_replace(DIRECTORY_SEPARATOR, '/', $outRel);
         if (str_starts_with($normRel, 'Database/Migrations/migration_create_')) {
-            $timestamp = date('Y_m_d_His');
+            $timestamp = $this->nextMigrationTimestamp();
             $suffix = substr($normRel, strlen('Database/Migrations/migration_'));
             $outRel = 'Database/Migrations/' . $timestamp . '_' . $suffix;
             $outRel = str_replace('/', DIRECTORY_SEPARATOR, $outRel);
@@ -258,5 +276,69 @@ class ExtensionBuilder
         $path = $stubsPath ?? ScaffoldConfig::stubsPath();
 
         return StubGroups::scan($path);
+    }
+
+    private function nextMigrationTimestamp(): string
+    {
+        $timestamp = (new DateTimeImmutable())->modify('+' . $this->migrationSequence . ' seconds')->format('Y_m_d_His');
+        $this->migrationSequence++;
+
+        return $timestamp;
+    }
+
+    private function prepareTargetRoot(string $targetRoot, string $name): void
+    {
+        if ($this->files->exists($targetRoot)) {
+            if (!$this->force) {
+                throw new \RuntimeException(__('extensions::lang.extension_exists', ['name' => $name, 'path' => $targetRoot]));
+            }
+            if (!$this->files->isDirectory($targetRoot)) {
+                throw new \RuntimeException(__('extensions::lang.target_not_directory', ['path' => $targetRoot]));
+            }
+
+            return;
+        }
+
+        $this->ensureDirectory($targetRoot);
+    }
+
+    private function ensureDirectory(string $path): void
+    {
+        if ($this->files->exists($path) && !$this->files->isDirectory($path)) {
+            throw new \RuntimeException(__('extensions::lang.target_not_directory', ['path' => $path]));
+        }
+
+        if ($this->files->isDirectory($path)) {
+            if (!is_writable($path)) {
+                throw new \RuntimeException(__('extensions::lang.path_not_writable', ['path' => $path]));
+            }
+
+            return;
+        }
+
+        try {
+            $created = $this->files->makeDirectory($path, 0o775, true);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(__('extensions::lang.failed_create_directory', ['path' => $path]), 0, $e);
+        }
+
+        if (!$created) {
+            throw new \RuntimeException(__('extensions::lang.failed_create_directory', ['path' => $path]));
+        }
+    }
+
+    private function writeFile(string $path, string $content): void
+    {
+        $tmpPath = $path . '.tmp.' . Str::random(8);
+
+        $bytes = @file_put_contents($tmpPath, $content, LOCK_EX);
+        if ($bytes === false) {
+            throw new \RuntimeException(__('extensions::lang.failed_write_file', ['path' => $path]));
+        }
+
+        if (!@rename($tmpPath, $path)) {
+            @unlink($tmpPath);
+            throw new \RuntimeException(__('extensions::lang.failed_move_file', ['path' => $path]));
+        }
     }
 }

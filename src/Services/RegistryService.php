@@ -18,6 +18,9 @@ class RegistryService
     /** @var array<string,string> map canonicalType => absolutePath */
     private array $typedPaths = [];
 
+    /** @var array<string,string> map lowercase type => canonical type */
+    private array $typeMap = [];
+
     /** @var array<string, ManifestValue> */
     private array $manifests = [];
 
@@ -58,7 +61,18 @@ class RegistryService
             }
 
             // Recursive fallback to catch nested manifests (robustness)
-            $rii = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
+            $rii = new \RecursiveIteratorIterator(
+                new \RecursiveCallbackFilterIterator(
+                    new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+                    function (\SplFileInfo $current): bool {
+                        if (!$current->isDir()) {
+                            return true;
+                        }
+
+                        return !in_array(strtolower($current->getFilename()), $this->excludedRecursiveDirectories(), true);
+                    }
+                )
+            );
             /** @var \SplFileInfo $file */
             foreach ($rii as $file) {
                 if (!$file->isFile()) {
@@ -103,7 +117,7 @@ class RegistryService
         $composerData = JsonFileReader::read($composerPath);
         if ($composerData && isset($composerData['require']) && is_array($composerData['require'])) {
             foreach ($composerData['require'] as $pkg => $constraint) {
-                if (is_string($pkg) && is_string($constraint) && $pkg !== 'php') {
+                if (is_string($pkg) && is_string($constraint) && $this->shouldTrackPackageDependency($pkg)) {
                     $requiresPackages[$pkg] = $constraint;
                 }
             }
@@ -127,7 +141,7 @@ class RegistryService
 
     private function normalizePath(string $path): string
     {
-        if (str_starts_with($path, DIRECTORY_SEPARATOR) || preg_match('~^[A-Za-z]:\\\\~', $path) === 1) {
+        if (str_starts_with($path, DIRECTORY_SEPARATOR) || preg_match('~^[A-Za-z]:[\\\\/]~', $path) === 1) {
             return rtrim($path, DIRECTORY_SEPARATOR);
         }
 
@@ -140,6 +154,7 @@ class RegistryService
         $typed = [];
         foreach ($paths as $key => $val) {
             if (is_string($key) && is_string($val)) {
+                $this->typeMap[strtolower((string) $key)] = (string) $key;
                 $typed[$this->canonicalizeType((string) $key)] = $this->normalizePath((string) $val);
             } elseif (is_string($val)) {
                 // Untyped path; keep with empty type key but unique index
@@ -157,19 +172,29 @@ class RegistryService
         if ($type === '') {
             return '';
         }
-        // Build once: lower => canonical
-        static $map = null;
-        if ($map === null) {
-            $map = [];
-            foreach ($this->paths as $k => $v) {
-                if (is_string($k)) {
-                    $map[strtolower($k)] = (string) $k;
-                }
-            }
-        }
+
         $lower = strtolower($type);
 
-        return $map[$lower] ?? $type;
+        return $this->typeMap[$lower] ?? $type;
+    }
+
+    /** @return string[] */
+    private function excludedRecursiveDirectories(): array
+    {
+        return ['vendor', 'node_modules', '.git', '.svn', '.hg'];
+    }
+
+    private function shouldTrackPackageDependency(string $package): bool
+    {
+        $package = strtolower(trim($package));
+
+        if ($package === '' || $package === 'php') {
+            return false;
+        }
+
+        return !str_starts_with($package, 'ext-')
+            && !str_starts_with($package, 'lib-')
+            && !str_starts_with($package, 'composer-');
     }
 
     /** @return Collection<int, ManifestValue> */

@@ -51,6 +51,21 @@ If using extensions with dependencies, configure the merge plugin in your `compo
 }
 ```
 
+Recommended include patterns should cover every configured extension type path:
+
+```json
+{
+  "extra": {
+    "merge-plugin": {
+      "include": [
+        "extensions/Modules/*/composer.json",
+        "extensions/Themes/*/composer.json"
+      ]
+    }
+  }
+}
+```
+
 Or enable via CLI:
 
 ```bash
@@ -58,6 +73,7 @@ composer config --no-plugins allow-plugins.wikimedia/composer-merge-plugin true
 ```
 
 > 💡 **Note**: Only needed if your extensions have their own Composer dependencies.
+> The package validates merge-plugin readiness (`installed`, `allow-plugins`, `include` coverage) before dependency installation.
 
 ## 3️⃣ Publish Configuration
 
@@ -72,7 +88,7 @@ php artisan extensions:publish --tag=extensions-config
 | Tag | Description | Command |
 |-----|-------------|----------|
 | `extensions-config` | Configuration file | `--tag=extensions-config` |
-| `extensions-migrations` | Database tables | `--tag=extensions-migrations` |
+| `extensions-migrations` | Database tables (`extensions`, `extension_operations`) | `--tag=extensions-migrations` |
 | `extensions-lang` | Translation files | `--tag=extensions-lang` |
 | `extensions-stubs` | Code templates | `--tag=extensions-stubs` |
 

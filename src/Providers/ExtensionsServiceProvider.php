@@ -73,6 +73,7 @@ class ExtensionsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadTranslationsFrom(__DIR__ . '/../../lang', 'extensions');
+        $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->publishes([
             __DIR__ . '/../../lang' => lang_path('vendor/extensions'),
         ], 'extensions-lang');
@@ -103,7 +104,7 @@ class ExtensionsServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             $this->app->make(Schedule::class)
                 ->call(function () {
-                    app(RegistryService::class)->discover();
+                    app(ExtensionService::class)->discover();
                 })
                 ->everyFiveMinutes();
         });
