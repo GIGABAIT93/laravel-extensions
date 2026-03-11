@@ -32,6 +32,9 @@ abstract class TestCase extends Orchestra
         ]);
         $app['config']->set('extensions.activator', \Gigabait93\Extensions\Activators\FileActivator::class);
         $app['config']->set('extensions.json_file', $base . '/statuses.json');
+        $app['config']->set('extensions.registry.cache.enabled', true);
+        $app['config']->set('extensions.registry.cache.path', $base . '/registry-cache.json');
+        $app['config']->set('extensions.registry.scan.recursive_fallback', true);
         $app['config']->set('extensions.switch_types', ['Themes']);
         $app['config']->set('extensions.operations.store', 'database');
     }
@@ -41,5 +44,6 @@ abstract class TestCase extends Orchestra
         parent::setUp();
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
         @unlink(__DIR__ . '/fixtures/extensions/statuses.json');
+        @unlink(__DIR__ . '/fixtures/extensions/registry-cache.json');
     }
 }

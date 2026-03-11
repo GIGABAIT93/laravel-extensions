@@ -118,6 +118,8 @@ class ExtensionBuilder
             $created[] = $outRel;
         }
 
+        $this->registry->clearCache(true);
+
         return [
             'path' => $targetRoot,
             'namespace' => $namespace,

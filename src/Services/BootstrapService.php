@@ -26,8 +26,12 @@ class BootstrapService
             return;
         }
         $this->warmed = true;
-        $this->registry->discover();
+
         $statuses = $this->activator->statuses();
+        if ($statuses === []) {
+            return;
+        }
+
         // Collect enabled manifests
         $manifests = [];
         foreach ($statuses as $id => $state) {

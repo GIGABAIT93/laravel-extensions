@@ -65,8 +65,8 @@ class ExtensionService
         return $this->cachedManifests ??= $this->registry->all();
     }
 
-    /** Clear internal caches */
-    private function clearCache(): void
+    /** Clear internal caches, optionally invalidating the persisted registry snapshot. */
+    private function resetRuntimeCache(bool $forgetRegistry = false): void
     {
         $this->cachedStatuses = null;
         $this->cachedManifests = null;
@@ -75,33 +75,33 @@ class ExtensionService
         $this->cachedSwitchTypes = [];
         $this->cachedStats = null;
         $this->cachedTotalSize = null;
-        $this->registry->clearCache();
+        $this->registry->clearCache($forgetRegistry);
     }
 
     /** Ensure manifests are up-to-date and purge activator entries for missing extensions */
     public function discover(): OpResult
     {
         try {
-            $this->clearCache();
+            $this->resetRuntimeCache();
             $this->registry->discover();
 
-            $knownIds = array_flip(
-                $this->getAllManifests()->map(static fn ($m) => $m->id)->all()
-            );
+            $manifests = $this->getAllManifests();
+            $knownIds = array_flip($manifests->map(static fn ($manifest) => $manifest->id)->all());
+            $statuses = $this->getStatuses();
 
             $removedExtensions = [];
-            foreach (array_keys($this->getStatuses()) as $id) {
+            foreach (array_keys($statuses) as $id) {
                 if (!isset($knownIds[$id])) {
                     $this->activator->remove($id);
                     $removedExtensions[] = $id;
-                    $this->clearCache(); // Clear cache after removing status
+                    unset($statuses[$id]);
                 }
             }
 
-            $discoveredCount = $this->getAllManifests()->count();
-            $statuses = $this->getStatuses();
+            $this->cachedStatuses = $statuses;
+            $discoveredCount = $manifests->count();
 
-            foreach ($this->getAllManifests() as $manifest) {
+            foreach ($manifests as $manifest) {
                 ExtensionDiscoveredEvent::dispatch($this->makeExtension($manifest, $statuses));
             }
 
@@ -203,7 +203,7 @@ class ExtensionService
     public function enable(string $id): OpResult
     {
         // Check if already enabled
-        if ($this->activator->isEnabled($id)) {
+        if (!empty($this->getStatuses()[$id]['enabled'])) {
             return OpResult::success(__('extensions::lang.extension_already_enabled'));
         }
 
@@ -232,7 +232,7 @@ class ExtensionService
 
             $extension = $this->get($id);
             $this->activator->disable($id, $manifest->type);
-            $this->clearCache(); // Clear cache after state change
+            $this->resetRuntimeCache();
 
             ExtensionDisabledEvent::dispatch($extension);
             Log::info('Extension disabled', ['id' => $id]);
@@ -851,7 +851,7 @@ class ExtensionService
 
                 // Persist + bootstrap
                 $this->activator->enable($id, $manifest->type);
-                $this->clearCache(); // Clear cache after state change
+                $this->resetRuntimeCache();
                 $this->bootstrapper->registerProvider($manifest);
 
                 $extension = $this->get($id);
@@ -956,7 +956,7 @@ class ExtensionService
     public function validateCanEnable(string $id): OpResult
     {
         return $this->wrapValidation($id, function ($id) {
-            if ($this->activator->isEnabled($id)) {
+            if (!empty($this->getStatuses()[$id]['enabled'])) {
                 return OpResult::failure(__('extensions::lang.extension_already_enabled'), 'already_enabled');
             }
 
@@ -969,7 +969,7 @@ class ExtensionService
     public function validateCanDisable(string $id): OpResult
     {
         return $this->wrapValidation($id, function ($id) {
-            if (!$this->activator->isEnabled($id)) {
+            if (empty($this->getStatuses()[$id]['enabled'])) {
                 return OpResult::failure(__('extensions::lang.extension_already_disabled'), 'already_disabled');
             }
 
@@ -1065,9 +1065,10 @@ class ExtensionService
     private function getMissingExtensions(ManifestValue $manifest): array
     {
         $result = [];
+        $statuses = $this->getStatuses();
         foreach ((array) $manifest->requires_extensions as $req) {
             $m = $this->registry->find($req);
-            if (!$m || !$this->activator->isEnabled($req)) {
+            if (!$m || empty($statuses[$req]['enabled'])) {
                 $result[] = $req;
             }
         }
@@ -1084,6 +1085,9 @@ class ExtensionService
             return;
         }
 
+        $statuses = $this->getStatuses();
+        $changed = false;
+
         foreach ($this->getAllManifests() as $m) {
             if ($m->id === $manifest->id) {
                 continue;
@@ -1094,10 +1098,16 @@ class ExtensionService
             if ($this->isProtectedManifest($m)) {
                 continue;
             }
-            if ($this->activator->isEnabled($m->id)) {
+            if (!empty($statuses[$m->id]['enabled'])) {
                 $this->activator->disable($m->id, $m->type);
-                $this->clearCache(); // Clear cache after state change
+                $statuses[$m->id]['enabled'] = false;
+                $changed = true;
             }
+        }
+
+        if ($changed) {
+            $this->cachedStatuses = $statuses;
+            $this->resetRuntimeCache();
         }
     }
 
@@ -1117,7 +1127,7 @@ class ExtensionService
             $extension = $this->get($id);
 
             // Disable first if enabled
-            if ($this->activator->isEnabled($id)) {
+            if (!empty($this->getStatuses()[$id]['enabled'])) {
                 $disableResult = $this->disable($id);
                 if ($disableResult->isFailure()) {
                     return $disableResult;
@@ -1140,7 +1150,7 @@ class ExtensionService
             }
 
             $this->activator->remove($id);
-            $this->clearCache(); // Clear cache after removing status
+            $this->resetRuntimeCache(true);
 
             ExtensionDeletedEvent::dispatch($extension, ['path' => $path]);
             Log::info('Extension deleted', ['id' => $id, 'path' => $path]);
