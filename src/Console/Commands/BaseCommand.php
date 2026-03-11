@@ -8,6 +8,7 @@ use Gigabait93\Extensions\Entities\Extension as Extension;
 use Gigabait93\Extensions\Services\ExtensionService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Laravel\Prompts\Exceptions\NonInteractiveValidationException;
 
 use function Laravel\Prompts\info;
@@ -30,7 +31,7 @@ abstract class BaseCommand extends Command
      */
     protected function selectTypeInteractively(ExtensionService $extensions, string $current = ''): string
     {
-        if (!$this->input->isInteractive() || $this->option('plain')) {
+        if (!$this->input->isInteractive() || $this->option('plain') || $this->isJsonOutput()) {
             return $current;
         }
 
@@ -57,8 +58,22 @@ abstract class BaseCommand extends Command
         return $extensions->one($arg, $type);
     }
 
-    protected function displayResults(array $rows, bool $interactive = true): void
+    protected function displayResults(array $rows, bool $interactive = true, array $meta = []): void
     {
+        if ($this->isJsonOutput()) {
+            $payload = array_merge([
+                'rows' => array_map(static fn (array $row): array => [
+                    'extension' => (string) ($row[0] ?? ''),
+                    'result' => (string) ($row[1] ?? ''),
+                ], $rows),
+                'count' => count($rows),
+            ], $meta);
+
+            $this->line((string) json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return;
+        }
+
         if ($interactive && !$this->option('plain')) {
             table([__('extensions::lang.extension'), __('extensions::lang.result')], $rows);
         } else {
@@ -144,12 +159,19 @@ abstract class BaseCommand extends Command
             return [];
         }
 
+        $this->warn(__('extensions::lang.extension_not_found'));
+
         return [];
     }
 
     protected function isInteractive(): bool
     {
-        return $this->input->isInteractive() && !$this->option('plain');
+        return $this->input->isInteractive() && !$this->option('plain') && !$this->isJsonOutput();
+    }
+
+    protected function isJsonOutput(): bool
+    {
+        return (bool) ($this->option('json') ?? false);
     }
 
     /**
@@ -188,5 +210,56 @@ abstract class BaseCommand extends Command
         } catch (NonInteractiveValidationException) {
             return reset($targets) ?: $targets[0];
         }
+    }
+
+    /**
+     * Parse comma-separated IDs from option value.
+     *
+     * @return string[]
+     */
+    protected function parseIdsOption(mixed $ids): array
+    {
+        if (!is_string($ids) || trim($ids) === '') {
+            return [];
+        }
+
+        $items = array_map(static fn (string $id): string => trim($id), explode(',', $ids));
+        $items = array_filter($items, static fn (string $id): bool => $id !== '');
+
+        return array_values(array_unique($items));
+    }
+
+    /**
+     * Normalize and deduplicate IDs preserving first occurrence order.
+     *
+     * @param array<int, string> $ids
+     * @return string[]
+     */
+    protected function uniqueIds(array $ids): array
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($ids as $id) {
+            $normalized = Str::lower(trim($id));
+            if ($normalized === '' || isset($seen[$normalized])) {
+                continue;
+            }
+
+            $seen[$normalized] = true;
+            $result[] = $id;
+        }
+
+        return $result;
+    }
+
+    protected function hasConflictingTargetSelection(?string $arg, array $ids, bool $all): bool
+    {
+        $selectionCount = 0;
+        $selectionCount += $all ? 1 : 0;
+        $selectionCount += !empty($ids) ? 1 : 0;
+        $selectionCount += (is_string($arg) && trim($arg) !== '') ? 1 : 0;
+
+        return $selectionCount > 1;
     }
 }

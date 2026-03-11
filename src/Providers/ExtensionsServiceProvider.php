@@ -40,6 +40,9 @@ class ExtensionsServiceProvider extends ServiceProvider
             return new RegistryService(
                 config('extensions.paths', []),
                 base_path(),
+                (bool) config('extensions.registry.cache.enabled', true),
+                (string) config('extensions.registry.cache.path', storage_path('framework/cache/extensions_registry.json')),
+                (bool) config('extensions.registry.scan.recursive_fallback', true),
             );
         });
         $this->app->singleton(BootstrapService::class, function ($app) {
@@ -54,7 +57,7 @@ class ExtensionsServiceProvider extends ServiceProvider
         $this->app->singleton(MigratorService::class, fn ($app) => new MigratorService($app));
 
         // Activator binding (configurable class)
-        $this->app->bind(ActivatorContract::class, fn ($app) => $app->make(config('extensions.activator')));
+        $this->app->singleton(ActivatorContract::class, fn ($app) => $app->make(config('extensions.activator')));
 
         // Facade accessor binding for Extensions facade
         $this->app->singleton('extensions', function ($app) {
@@ -73,6 +76,7 @@ class ExtensionsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadTranslationsFrom(__DIR__ . '/../../lang', 'extensions');
+        $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->publishes([
             __DIR__ . '/../../lang' => lang_path('vendor/extensions'),
         ], 'extensions-lang');
@@ -96,24 +100,25 @@ class ExtensionsServiceProvider extends ServiceProvider
             __DIR__ . '/../../stubs/Extension' => base_path('stubs/Extension'),
         ], 'extensions');
 
-        // Artisan commands
-        $this->registerCommands();
+        if ($this->app->runningInConsole()) {
+            // Artisan commands
+            $this->registerCommands();
 
-        // Schedule periodic rediscovery without relying on a missing Artisan command
-        $this->app->booted(function () {
-            $this->app->make(Schedule::class)
-                ->call(function () {
-                    app(RegistryService::class)->discover();
-                })
-                ->everyFiveMinutes();
-        });
+            // Schedule periodic rediscovery without attaching scheduler setup to HTTP requests
+            $this->app->booted(function () {
+                $this->app->make(Schedule::class)
+                    ->call(function () {
+                        app(ExtensionService::class)->discover();
+                    })
+                    ->everyFiveMinutes();
+            });
+        }
 
-        // Initialize extensions runtime (discover + bootstrap) — lightweight warmup
+        // Initialize extensions runtime from the cached registry.
         $this->app->booted(function () {
             $bootstrapper = $this->app->make(BootstrapService::class);
             $bootstrapper->warmup();
         });
-
     }
 
     protected function registerCommands(): void

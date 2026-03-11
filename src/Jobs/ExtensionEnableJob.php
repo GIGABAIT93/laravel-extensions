@@ -13,7 +13,8 @@ class ExtensionEnableJob extends BaseJob
     protected function executeOperation(ExtensionService $extensions, TrackerService $tracker): OpResult
     {
         $operation = $tracker->getOperation($this->operationId);
-        $autoInstallDeps = $operation['context']['auto_install_deps'] ?? false;
+        $context = is_array($operation) ? ($operation['context'] ?? []) : [];
+        $autoInstallDeps = (bool) ($context['auto_install_deps'] ?? false);
 
         // Check if dependencies need to be installed first
         if ($autoInstallDeps) {

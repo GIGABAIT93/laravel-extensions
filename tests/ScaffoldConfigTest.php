@@ -11,8 +11,15 @@ class ScaffoldConfigTest extends TestCase
     public function test_stubs_path_defaults_to_package(): void
     {
         config(['extensions.stubs.path' => null]);
-        $expected = base_path('vendor/gigabait93/laravel-extensions/stubs/Extension');
-        $this->assertSame($expected, ScaffoldConfig::stubsPath());
+        $vendorPath = base_path('vendor/gigabait93/laravel-extensions/stubs/Extension');
+        $expected = is_dir($vendorPath)
+            ? $vendorPath
+            : dirname(__DIR__) . '/stubs/Extension';
+
+        $this->assertSame(
+            str_replace('\\', '/', $expected),
+            str_replace('\\', '/', ScaffoldConfig::stubsPath())
+        );
     }
 
     public function test_stubs_path_can_be_overridden(): void

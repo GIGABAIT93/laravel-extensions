@@ -84,6 +84,52 @@ class ScaffoldBuilderTest extends TestCase
         }
     }
 
+    public function test_build_fails_for_invalid_extension_name(): void
+    {
+        $tmp = sys_get_temp_dir() . '/ext_scaffold_' . uniqid();
+        File::makeDirectory($tmp, 0o777, true);
+
+        try {
+            $builder = $this->app->make(ExtensionBuilder::class);
+
+            $this->expectException(\RuntimeException::class);
+
+            $builder->withType('Modules')
+                ->withName('123invalid')
+                ->withBasePath($tmp)
+                ->withStubsPath(dirname(__DIR__) . '/stubs/Extension')
+                ->withGroups([])
+                ->withForce(true)
+                ->build();
+        } finally {
+            File::deleteDirectory($tmp);
+        }
+    }
+
+    public function test_build_fails_when_base_path_is_not_a_directory(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'ext_base_');
+        if ($tmpFile === false) {
+            $this->fail('Failed to create temporary base file');
+        }
+
+        try {
+            $builder = $this->app->make(ExtensionBuilder::class);
+
+            $this->expectException(\RuntimeException::class);
+
+            $builder->withType('Modules')
+                ->withName('Blog')
+                ->withBasePath($tmpFile)
+                ->withStubsPath(dirname(__DIR__) . '/stubs/Extension')
+                ->withGroups([])
+                ->withForce(true)
+                ->build();
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
     public function test_get_available_types(): void
     {
         $types = ExtensionBuilder::getAvailableTypes();

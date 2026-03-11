@@ -9,12 +9,14 @@ use Gigabait93\Extensions\Entities\Extension;
 use Gigabait93\Extensions\Events\ExtensionDeletedEvent;
 use Gigabait93\Extensions\Events\ExtensionDepsInstalledEvent;
 use Gigabait93\Extensions\Events\ExtensionDisabledEvent;
+use Gigabait93\Extensions\Events\ExtensionDiscoveredEvent;
 use Gigabait93\Extensions\Events\ExtensionEnabledEvent;
 use Gigabait93\Extensions\Jobs\ExtensionDisableJob;
 use Gigabait93\Extensions\Jobs\ExtensionEnableJob;
 use Gigabait93\Extensions\Jobs\ExtensionInstallDepsJob;
 use Gigabait93\Extensions\Support\ManifestValue;
 use Gigabait93\Extensions\Support\OpResult;
+use Gigabait93\Extensions\Support\PathResolver;
 use Gigabait93\Extensions\Support\ValidationWrapper;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Collection;
@@ -63,8 +65,8 @@ class ExtensionService
         return $this->cachedManifests ??= $this->registry->all();
     }
 
-    /** Clear internal caches */
-    private function clearCache(): void
+    /** Clear internal caches, optionally invalidating the persisted registry snapshot. */
+    private function resetRuntimeCache(bool $forgetRegistry = false): void
     {
         $this->cachedStatuses = null;
         $this->cachedManifests = null;
@@ -73,30 +75,36 @@ class ExtensionService
         $this->cachedSwitchTypes = [];
         $this->cachedStats = null;
         $this->cachedTotalSize = null;
-        $this->registry->clearCache();
+        $this->registry->clearCache($forgetRegistry);
     }
 
     /** Ensure manifests are up-to-date and purge activator entries for missing extensions */
     public function discover(): OpResult
     {
         try {
-            $this->clearCache();
+            $this->resetRuntimeCache();
             $this->registry->discover();
 
-            $knownIds = array_flip(
-                $this->getAllManifests()->map(static fn ($m) => $m->id)->all()
-            );
+            $manifests = $this->getAllManifests();
+            $knownIds = array_flip($manifests->map(static fn ($manifest) => $manifest->id)->all());
+            $statuses = $this->getStatuses();
 
             $removedExtensions = [];
-            foreach (array_keys($this->getStatuses()) as $id) {
+            foreach (array_keys($statuses) as $id) {
                 if (!isset($knownIds[$id])) {
                     $this->activator->remove($id);
                     $removedExtensions[] = $id;
-                    $this->clearCache(); // Clear cache after removing status
+                    unset($statuses[$id]);
                 }
             }
 
-            $discoveredCount = $this->getAllManifests()->count();
+            $this->cachedStatuses = $statuses;
+            $discoveredCount = $manifests->count();
+
+            foreach ($manifests as $manifest) {
+                ExtensionDiscoveredEvent::dispatch($this->makeExtension($manifest, $statuses));
+            }
+
             $message = __('extensions::lang.discovered_extensions', ['count' => $discoveredCount]);
 
             if (!empty($removedExtensions)) {
@@ -195,7 +203,7 @@ class ExtensionService
     public function enable(string $id): OpResult
     {
         // Check if already enabled
-        if ($this->activator->isEnabled($id)) {
+        if (!empty($this->getStatuses()[$id]['enabled'])) {
             return OpResult::success(__('extensions::lang.extension_already_enabled'));
         }
 
@@ -224,7 +232,7 @@ class ExtensionService
 
             $extension = $this->get($id);
             $this->activator->disable($id, $manifest->type);
-            $this->clearCache(); // Clear cache after state change
+            $this->resetRuntimeCache();
 
             ExtensionDisabledEvent::dispatch($extension);
             Log::info('Extension disabled', ['id' => $id]);
@@ -340,6 +348,11 @@ class ExtensionService
     public function enableAsync(string $id, bool $autoInstallDeps = false): string
     {
         $tracker = $this->app->make(TrackerService::class);
+        $pending = $tracker->getPendingOperationId($id, 'enable');
+        if ($pending !== null) {
+            return $pending;
+        }
+
         $operationId = $tracker->createOperation('enable', $id, ['auto_install_deps' => $autoInstallDeps]);
 
         ExtensionEnableJob::dispatch($id, $operationId);
@@ -350,6 +363,11 @@ class ExtensionService
     public function disableAsync(string $id): string
     {
         $tracker = $this->app->make(TrackerService::class);
+        $pending = $tracker->getPendingOperationId($id, 'disable');
+        if ($pending !== null) {
+            return $pending;
+        }
+
         $operationId = $tracker->createOperation('disable', $id);
 
         ExtensionDisableJob::dispatch($id, $operationId);
@@ -360,6 +378,11 @@ class ExtensionService
     public function installDepsAsync(string $id, bool $autoEnable = false): string
     {
         $tracker = $this->app->make(TrackerService::class);
+        $pending = $tracker->getPendingOperationId($id, 'install_deps');
+        if ($pending !== null) {
+            return $pending;
+        }
+
         $operationId = $tracker->createOperation('install_deps', $id, ['auto_enable' => $autoEnable]);
 
         ExtensionInstallDepsJob::dispatch($id, $operationId);
@@ -418,37 +441,24 @@ class ExtensionService
             return null;
         }
 
-        $operations = $this->getExtensionOperations($id);
-        $missing = $this->missingPackages($id);
+        $tracker = $this->app->make(TrackerService::class);
+        $operations = $tracker->getOperationsByExtension($id);
 
-        return [
-            'extension' => [
-                'id' => $extension->id(),
-                'name' => $extension->name(),
-                'type' => $extension->type(),
-                'version' => $extension->version(),
-                'enabled' => $extension->isEnabled(),
-                'broken' => $extension->isBroken(),
-                'issue' => $extension->issue(),
-                'path' => $extension->path(),
-            ],
-            'status' => [
-                'can_enable' => empty($missing) && !$extension->isEnabled(),
-                'can_disable' => $extension->isEnabled() && !$this->isExtensionProtected($extension->id()),
-                'missing_packages' => $missing,
-                'has_pending_operations' => !empty(array_filter($operations, fn ($op) => in_array($op['status'], ['queued', 'running']))),
-            ],
-            'operations' => $operations,
-        ];
+        return $this->buildExtensionWithOperationsData($extension, $operations);
     }
 
     public function getAllWithOperations(): array
     {
         $extensions = $this->all();
+        $tracker = $this->app->make(TrackerService::class);
+        $operationsByExtension = $tracker->getOperationsByExtensions($extensions->map->id()->all());
         $result = [];
 
         foreach ($extensions as $extension) {
-            $result[] = $this->getExtensionWithOperations($extension->id());
+            $result[] = $this->buildExtensionWithOperationsData(
+                $extension,
+                $operationsByExtension[$extension->id()] ?? []
+            );
         }
 
         return $result;
@@ -564,6 +574,8 @@ class ExtensionService
     public function getOperationsSummary(): array
     {
         $allExtensions = $this->all();
+        $tracker = $this->app->make(TrackerService::class);
+        $operationsByExtension = $tracker->getOperationsByExtensions($allExtensions->map->id()->all());
         $summary = [
             'total_extensions' => $allExtensions->count(),
             'enabled_extensions' => $allExtensions->filter->isEnabled()->count(),
@@ -577,8 +589,7 @@ class ExtensionService
             'recent_operations' => [],
         ];
 
-        foreach ($allExtensions as $extension) {
-            $operations = $this->getExtensionOperations($extension->id());
+        foreach ($operationsByExtension as $operations) {
             foreach ($operations as $op) {
                 $summary['operations'][$op['status']] = ($summary['operations'][$op['status']] ?? 0) + 1;
                 $summary['recent_operations'][] = $op;
@@ -590,6 +601,35 @@ class ExtensionService
         $summary['recent_operations'] = array_slice($summary['recent_operations'], 0, 10);
 
         return $summary;
+    }
+
+    /**
+     * @param array<int, array<string,mixed>> $operations
+     * @return array<string,mixed>
+     */
+    private function buildExtensionWithOperationsData(Extension $extension, array $operations): array
+    {
+        $missing = $this->missingPackages($extension->id());
+
+        return [
+            'extension' => [
+                'id' => $extension->id(),
+                'name' => $extension->name(),
+                'type' => $extension->type(),
+                'version' => $extension->version(),
+                'enabled' => $extension->isEnabled(),
+                'broken' => $extension->isBroken(),
+                'issue' => $extension->issue(),
+                'path' => $extension->path(),
+            ],
+            'status' => [
+                'can_enable' => empty($missing) && !$extension->isEnabled(),
+                'can_disable' => $extension->isEnabled() && !$this->isExtensionProtected($extension->id()),
+                'missing_packages' => $missing,
+                'has_pending_operations' => !empty(array_filter($operations, fn ($op) => in_array(($op['status'] ?? null), ['queued', 'running'], true))),
+            ],
+            'operations' => $operations,
+        ];
     }
 
     public function isProtected(string $extensionId): bool
@@ -751,38 +791,48 @@ class ExtensionService
             $missing = $this->deps->missingPackages($manifest);
 
             // Install composer dependencies if needed
-            /** @var ComposerService $mergeService */
-            $mergeService = $this->app->make(ComposerService::class);
+            /** @var ComposerService $composerService */
+            $composerService = $this->app->make(ComposerService::class);
 
             $installedPackages = [];
+            $hasComposerFile = $composerService->extensionHasComposerFile($manifest);
+            $composerData = $hasComposerFile ? $composerService->getExtensionComposerData($manifest) : null;
+            $dependencies = is_array($composerData['require'] ?? null) ? $composerData['require'] : [];
 
             // Check if extension has composer.json
-            if (!$mergeService->extensionHasComposerFile($manifest)) {
+            if (!$hasComposerFile) {
                 // No composer.json - just continue without installing packages
                 $installedPackages = [];
-            } else {
-                $composerData = $mergeService->getExtensionComposerData($manifest);
-                $dependencies = $composerData['require'] ?? [];
-
-                if (empty($dependencies)) {
-                    // No dependencies in composer.json - just continue
-                    $installedPackages = [];
-                } elseif (empty($missing)) {
-                    // Dependencies already installed - just continue
-                    $installedPackages = [];
-                } else {
-                    // Dependencies are missing - install them
-                    $success = $mergeService->installDependencies();
-
-                    if (!$success) {
-                        return OpResult::failure(__('extensions::lang.deps_install_failed_merge'), 'install_failed', ['packages' => $missing]);
-                    }
-
-                    $installedPackages = $missing;
-                    $extension = $this->get($id);
-                    ExtensionDepsInstalledEvent::dispatch($extension, ['packages' => $missing, 'method' => 'composer-merge-plugin']);
-                    Log::info('Dependencies installed via composer-merge-plugin', ['id' => $id, 'packages' => $missing]);
+            } elseif (empty($dependencies)) {
+                // No dependencies in composer.json - just continue
+                $installedPackages = [];
+            } elseif (!empty($missing)) {
+                $mergePluginValidation = $this->validateMergePluginReadiness($composerService, $manifest, $missing);
+                if ($mergePluginValidation !== null) {
+                    return $mergePluginValidation;
                 }
+
+                // Dependencies are missing - install only missing packages
+                $success = $composerService->installDependencies($missing);
+                if (!$success) {
+                    return OpResult::failure(__('extensions::lang.deps_install_failed_merge'), 'install_failed', ['packages' => $missing]);
+                }
+
+                // Refresh bundled vendor autoload and verify missing packages again.
+                $this->deps->includeExtensionVendor($manifest);
+                $stillMissing = $this->deps->missingPackages($manifest);
+                if (!empty($stillMissing)) {
+                    return OpResult::failure(
+                        __('extensions::lang.deps_still_missing', ['packages' => implode(', ', $stillMissing)]),
+                        'install_incomplete',
+                        ['packages' => $stillMissing]
+                    );
+                }
+
+                $installedPackages = $missing;
+                $extension = $this->get($id);
+                ExtensionDepsInstalledEvent::dispatch($extension, ['packages' => $missing, 'method' => 'composer-merge-plugin']);
+                Log::info('Dependencies installed via composer-merge-plugin', ['id' => $id, 'packages' => $missing]);
             }
 
             $data = ['packages' => $installedPackages];
@@ -801,7 +851,7 @@ class ExtensionService
 
                 // Persist + bootstrap
                 $this->activator->enable($id, $manifest->type);
-                $this->clearCache(); // Clear cache after state change
+                $this->resetRuntimeCache();
                 $this->bootstrapper->registerProvider($manifest);
 
                 $extension = $this->get($id);
@@ -828,11 +878,9 @@ class ExtensionService
                     return OpResult::success(__('extensions::lang.deps_installed'), $data);
                 } else {
                     // No packages to install or already installed
-                    if (!$mergeService->extensionHasComposerFile($manifest)) {
+                    if (!$hasComposerFile) {
                         return OpResult::success(__('extensions::lang.extension_no_composer'), $data);
                     } else {
-                        $composerData = $mergeService->getExtensionComposerData($manifest);
-                        $dependencies = $composerData['require'] ?? [];
                         if (empty($dependencies)) {
                             return OpResult::success(__('extensions::lang.extension_no_deps'), $data);
                         } else {
@@ -847,6 +895,49 @@ class ExtensionService
 
             return OpResult::failure(__('extensions::lang.install_failed', ['error' => $e->getMessage()]), 'exception');
         }
+    }
+
+    /**
+     * @param string[] $missingPackages
+     */
+    private function validateMergePluginReadiness(ComposerService $composerService, ManifestValue $manifest, array $missingPackages): ?OpResult
+    {
+        if (!$composerService->isMergePluginInstalled()) {
+            return OpResult::failure(
+                __('extensions::lang.merge_plugin_missing'),
+                'merge_plugin_missing',
+                ['packages' => $missingPackages]
+            );
+        }
+
+        if (!$composerService->isMergePluginAllowed()) {
+            return OpResult::failure(
+                __('extensions::lang.merge_plugin_not_allowed'),
+                'merge_plugin_not_allowed',
+                ['packages' => $missingPackages]
+            );
+        }
+
+        if (!$composerService->hasMergePluginIncludes()) {
+            return OpResult::failure(
+                __('extensions::lang.merge_plugin_no_includes'),
+                'merge_plugin_no_includes',
+                ['packages' => $missingPackages]
+            );
+        }
+
+        if (!$composerService->isExtensionComposerIncluded($manifest)) {
+            return OpResult::failure(
+                __('extensions::lang.merge_plugin_extension_not_included', ['id' => $manifest->id]),
+                'merge_plugin_extension_not_included',
+                [
+                    'packages' => $missingPackages,
+                    'includes' => $composerService->getMergePluginIncludes(),
+                ]
+            );
+        }
+
+        return null;
     }
 
     /**
@@ -865,7 +956,7 @@ class ExtensionService
     public function validateCanEnable(string $id): OpResult
     {
         return $this->wrapValidation($id, function ($id) {
-            if ($this->activator->isEnabled($id)) {
+            if (!empty($this->getStatuses()[$id]['enabled'])) {
                 return OpResult::failure(__('extensions::lang.extension_already_enabled'), 'already_enabled');
             }
 
@@ -878,7 +969,7 @@ class ExtensionService
     public function validateCanDisable(string $id): OpResult
     {
         return $this->wrapValidation($id, function ($id) {
-            if (!$this->activator->isEnabled($id)) {
+            if (empty($this->getStatuses()[$id]['enabled'])) {
                 return OpResult::failure(__('extensions::lang.extension_already_disabled'), 'already_disabled');
             }
 
@@ -974,9 +1065,10 @@ class ExtensionService
     private function getMissingExtensions(ManifestValue $manifest): array
     {
         $result = [];
+        $statuses = $this->getStatuses();
         foreach ((array) $manifest->requires_extensions as $req) {
             $m = $this->registry->find($req);
-            if (!$m || !$this->activator->isEnabled($req)) {
+            if (!$m || empty($statuses[$req]['enabled'])) {
                 $result[] = $req;
             }
         }
@@ -993,6 +1085,9 @@ class ExtensionService
             return;
         }
 
+        $statuses = $this->getStatuses();
+        $changed = false;
+
         foreach ($this->getAllManifests() as $m) {
             if ($m->id === $manifest->id) {
                 continue;
@@ -1003,10 +1098,16 @@ class ExtensionService
             if ($this->isProtectedManifest($m)) {
                 continue;
             }
-            if ($this->activator->isEnabled($m->id)) {
+            if (!empty($statuses[$m->id]['enabled'])) {
                 $this->activator->disable($m->id, $m->type);
-                $this->clearCache(); // Clear cache after state change
+                $statuses[$m->id]['enabled'] = false;
+                $changed = true;
             }
+        }
+
+        if ($changed) {
+            $this->cachedStatuses = $statuses;
+            $this->resetRuntimeCache();
         }
     }
 
@@ -1019,26 +1120,37 @@ class ExtensionService
             }
 
             $manifest = $this->registry->find($id);
+            if (!$manifest) {
+                return OpResult::failure(__('extensions::lang.extension_not_found'), 'not_found');
+            }
 
             $extension = $this->get($id);
 
             // Disable first if enabled
-            if ($this->activator->isEnabled($id)) {
+            if (!empty($this->getStatuses()[$id]['enabled'])) {
                 $disableResult = $this->disable($id);
                 if ($disableResult->isFailure()) {
                     return $disableResult;
                 }
             }
 
-            $this->activator->remove($id);
-            $this->clearCache(); // Clear cache after removing status
-
             $path = rtrim($manifest->path, DIRECTORY_SEPARATOR);
+            if (!$this->isManagedExtensionPath($path)) {
+                return OpResult::failure(
+                    __('extensions::lang.unsafe_delete_path', ['path' => $path]),
+                    'unsafe_path',
+                    ['path' => $path]
+                );
+            }
+
             $ok = $this->deleteDirectory($path);
 
             if (!$ok) {
                 return OpResult::failure(__('extensions::lang.failed_delete_directory'), 'fs_error');
             }
+
+            $this->activator->remove($id);
+            $this->resetRuntimeCache(true);
 
             ExtensionDeletedEvent::dispatch($extension, ['path' => $path]);
             Log::info('Extension deleted', ['id' => $id, 'path' => $path]);
@@ -1087,6 +1199,34 @@ class ExtensionService
         }
     }
 
+    private function isManagedExtensionPath(string $path): bool
+    {
+        $resolvedPath = realpath($path);
+        if ($resolvedPath === false) {
+            return false;
+        }
+
+        $resolvedPath = rtrim(str_replace('\\', '/', $resolvedPath), '/');
+
+        foreach ($this->typedPaths() as $rootPath) {
+            $resolvedRoot = realpath($rootPath);
+            if ($resolvedRoot === false) {
+                continue;
+            }
+
+            $resolvedRoot = rtrim(str_replace('\\', '/', $resolvedRoot), '/');
+            if ($resolvedPath === $resolvedRoot) {
+                continue;
+            }
+
+            if (str_starts_with(strtolower($resolvedPath . '/'), strtolower($resolvedRoot . '/'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Build a consistent ExtensionEntity instance from a manifest + current statuses.
      * Centralizes "enabled/broken/issue" logic.
@@ -1094,7 +1234,7 @@ class ExtensionService
     private function makeExtension(ManifestValue $m, array $statuses): Extension
     {
         $enabled = !empty($statuses[$m->id]['enabled']);
-        $broken = !class_exists($m->provider);
+        $broken = !class_exists($m->provider) && !PathResolver::hasProviderFile($m->path, $m->provider);
         $issue = $broken ? __('extensions::lang.provider_not_found') : null;
 
         return Extension::fromManifest($m, $enabled, $broken, $issue);

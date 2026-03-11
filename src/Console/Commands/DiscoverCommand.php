@@ -13,15 +13,28 @@ use function Laravel\Prompts\info;
  */
 class DiscoverCommand extends BaseCommand
 {
-    protected $signature = 'extensions:discover {--plain : Output without formatting}';
+    protected $signature = 'extensions:discover {--json : Output as JSON} {--plain : Output without formatting}';
 
     protected $description = 'Rediscover extensions in configured paths';
 
     public function handle(ExtensionService $extensions): int
     {
-        $extensions->discover();
-        info(__('extensions::lang.extensions_discovered'));
+        $result = $extensions->discover();
 
-        return self::SUCCESS;
+        if ($this->isJsonOutput()) {
+            $this->line((string) json_encode($result->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return $result->isSuccess() ? self::SUCCESS : self::FAILURE;
+        }
+
+        if ($result->isSuccess()) {
+            info($result->message ?? __('extensions::lang.extensions_discovered'));
+
+            return self::SUCCESS;
+        }
+
+        $this->error($result->message ?? __('extensions::lang.discovery_failed'));
+
+        return self::FAILURE;
     }
 }

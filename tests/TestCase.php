@@ -18,18 +18,32 @@ abstract class TestCase extends Orchestra
     {
         $base = __DIR__ . '/fixtures/extensions';
 
+        $app['config']->set('database.default', 'sqlite');
+        $app['config']->set('database.connections.sqlite', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ]);
+
         $app['config']->set('extensions.paths', [
             'Modules' => $base . '/Modules',
             'Themes' => $base . '/Themes',
         ]);
         $app['config']->set('extensions.activator', \Gigabait93\Extensions\Activators\FileActivator::class);
         $app['config']->set('extensions.json_file', $base . '/statuses.json');
+        $app['config']->set('extensions.registry.cache.enabled', true);
+        $app['config']->set('extensions.registry.cache.path', $base . '/registry-cache.json');
+        $app['config']->set('extensions.registry.scan.recursive_fallback', true);
         $app['config']->set('extensions.switch_types', ['Themes']);
+        $app['config']->set('extensions.operations.store', 'database');
     }
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
         @unlink(__DIR__ . '/fixtures/extensions/statuses.json');
+        @unlink(__DIR__ . '/fixtures/extensions/registry-cache.json');
     }
 }

@@ -16,8 +16,9 @@ A powerful modular extension framework for Laravel 12+ that enables you to build
 - **Runtime Discovery**: Automatically discover and load extensions from configured directories
 - **Activation Management**: Enable/disable extensions with dependency checks and protection mechanisms  
 - **Flexible Storage**: Choose between file-based or database activators for persistence
-- **Rich API**: Manage extensions through facade, HTTP API, and Artisan commands
+- **Rich API**: Manage extensions through facade and Artisan commands (plus your own UI/API layer)
 - **Async Operations**: Queue enable/disable/install operations with status monitoring
+- **Persistent Tracking**: Store async operation history in database for reliable UI monitoring
 - **Code Generation**: Scaffold new extensions with customizable stubs
 - **Event System**: Comprehensive event dispatching for extension lifecycle
 - **Multi-type Support**: Support for different extension types (Modules, Themes, etc.)
