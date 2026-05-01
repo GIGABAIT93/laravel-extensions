@@ -61,7 +61,7 @@ class DbActivator implements ActivatorContract
             return $callback();
         } catch (QueryException $e) {
             if ($this->isMissingTableException($e)) {
-                if (! $throwOnMissingTable) {
+                if (!$throwOnMissingTable) {
                     return $missingTableFallback;
                 }
 

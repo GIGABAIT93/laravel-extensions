@@ -18,10 +18,10 @@ class ExtensionProviderBootTimingTest extends Orchestra
 
     protected function setUp(): void
     {
-        $this->statusFile = __DIR__.'/fixtures/extensions/scheduled-statuses.json';
-        $this->registryCacheFile = __DIR__.'/fixtures/extensions/scheduled-registry-cache.json';
+        $this->statusFile = __DIR__ . '/fixtures/extensions/scheduled-statuses.json';
+        $this->registryCacheFile = __DIR__ . '/fixtures/extensions/scheduled-registry-cache.json';
 
-        require_once __DIR__.'/fixtures/scheduled-extension/Modules/Scheduled/Providers/ScheduledServiceProvider.php';
+        require_once __DIR__ . '/fixtures/scheduled-extension/Modules/Scheduled/Providers/ScheduledServiceProvider.php';
 
         @unlink($this->statusFile);
         @unlink($this->registryCacheFile);
@@ -47,11 +47,11 @@ class ExtensionProviderBootTimingTest extends Orchestra
 
     protected function getEnvironmentSetUp($app): void
     {
-        $base = __DIR__.'/fixtures/scheduled-extension';
+        $base = __DIR__ . '/fixtures/scheduled-extension';
 
         $app['config']->set('extensions.paths', [
-            'Modules' => $base.'/Modules',
-            'Themes' => $base.'/Themes',
+            'Modules' => $base . '/Modules',
+            'Themes' => $base . '/Themes',
         ]);
         $app['config']->set('extensions.activator', FileActivator::class);
         $app['config']->set('extensions.json_file', $this->statusFile);
