@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Gigabait93\Extensions\Tests;
 
 use Gigabait93\Extensions\Activators\DbActivator;
+use Gigabait93\Extensions\Models\ExtensionStatus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -41,8 +44,42 @@ class DbActivatorTest extends Orchestra
         $this->assertSame('Themes', $data['demo']['type']);
     }
 
+    public function test_statuses_are_cached_between_reads(): void
+    {
+        $activator = new DbActivator();
+        $activator->enable('demo', 'Themes');
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $this->assertSame($activator->statuses(), $activator->statuses());
+
+        $selects = collect(DB::getQueryLog())
+            ->filter(fn (array $query): bool => str_starts_with(strtolower($query['query']), 'select'))
+            ->count();
+
+        $this->assertSame(1, $selects);
+    }
+
+    public function test_mutations_flush_status_cache(): void
+    {
+        $activator = new DbActivator();
+        $activator->enable('demo', 'Themes');
+
+        $this->assertTrue($activator->statuses()['demo']['enabled']);
+
+        ExtensionStatus::query()->whereKey('demo')->update(['enabled' => false]);
+
+        $this->assertTrue($activator->statuses()['demo']['enabled']);
+
+        $activator->disable('demo', 'Themes');
+
+        $this->assertFalse($activator->statuses()['demo']['enabled']);
+    }
+
     public function test_status_reads_are_empty_when_extensions_table_is_missing(): void
     {
+        Cache::flush();
         Schema::dropIfExists('extensions');
 
         $activator = new DbActivator();

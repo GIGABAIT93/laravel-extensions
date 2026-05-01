@@ -110,6 +110,12 @@ return [
     */
     'activator' => \Gigabait93\Extensions\Activators\FileActivator::class,
 
+    'activator_cache' => [
+        'enabled' => true,
+        'key' => 'extensions:activator:statuses',
+        'ttl' => 300,
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | JSON File for File Storage
