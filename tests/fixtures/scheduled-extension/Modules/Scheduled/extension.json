@@ -1,0 +1,6 @@
+{
+  "id": "scheduled",
+  "name": "Scheduled",
+  "provider": "Modules\\Scheduled\\Providers\\ScheduledServiceProvider",
+  "type": "Modules"
+}

@@ -70,6 +70,10 @@ class ExtensionsServiceProvider extends ServiceProvider
                 $app,
             );
         });
+
+        $this->app->booting(function (): void {
+            $this->app->make(BootstrapService::class)->warmup();
+        });
     }
 
     /** Bootstrap package features */
@@ -114,11 +118,6 @@ class ExtensionsServiceProvider extends ServiceProvider
             });
         }
 
-        // Initialize extensions runtime from the cached registry.
-        $this->app->booted(function () {
-            $bootstrapper = $this->app->make(BootstrapService::class);
-            $bootstrapper->warmup();
-        });
     }
 
     protected function registerCommands(): void
