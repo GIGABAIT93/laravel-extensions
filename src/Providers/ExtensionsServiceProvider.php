@@ -71,14 +71,13 @@ class ExtensionsServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->booting(function (): void {
-            $this->app->make(BootstrapService::class)->warmup();
-        });
     }
 
     /** Bootstrap package features */
     public function boot(): void
     {
+        $this->app->make(BootstrapService::class)->warmup();
+
         $this->loadTranslationsFrom(__DIR__ . '/../../lang', 'extensions');
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->publishes([
