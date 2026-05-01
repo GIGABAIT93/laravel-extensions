@@ -23,7 +23,11 @@ class DbActivator implements ActivatorContract
 
     public function isEnabled(string $id): bool
     {
-        return (bool) optional($this->runAgainstTable(fn () => ExtensionStatus::query()->find($id)))->enabled;
+        return (bool) optional($this->runAgainstTable(
+            fn () => ExtensionStatus::query()->find($id),
+            missingTableFallback: null,
+            throwOnMissingTable: false,
+        ))->enabled;
     }
 
     public function remove(string $id): void
@@ -45,15 +49,22 @@ class DbActivator implements ActivatorContract
             ->get(['name', 'enabled', 'type'])
             ->keyBy('name')
             ->map(fn ($row) => ['enabled' => (bool) $row->enabled, 'type' => $row->type])
-            ->all());
+            ->all(), [], false);
     }
 
-    private function runAgainstTable(callable $callback): mixed
-    {
+    private function runAgainstTable(
+        callable $callback,
+        mixed $missingTableFallback = null,
+        bool $throwOnMissingTable = true,
+    ): mixed {
         try {
             return $callback();
         } catch (QueryException $e) {
             if ($this->isMissingTableException($e)) {
+                if (! $throwOnMissingTable) {
+                    return $missingTableFallback;
+                }
+
                 throw new RuntimeException(
                     "The 'extensions' table is missing. Publish and run migrations to use the database activator.",
                     0,

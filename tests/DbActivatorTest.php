@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gigabait93\Extensions\Tests;
 
 use Gigabait93\Extensions\Activators\DbActivator;
+use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 class DbActivatorTest extends Orchestra
@@ -38,5 +39,15 @@ class DbActivatorTest extends Orchestra
         $data = $activator->statuses();
         $this->assertFalse($data['demo']['enabled']);
         $this->assertSame('Themes', $data['demo']['type']);
+    }
+
+    public function test_status_reads_are_empty_when_extensions_table_is_missing(): void
+    {
+        Schema::dropIfExists('extensions');
+
+        $activator = new DbActivator();
+
+        $this->assertFalse($activator->isEnabled('demo'));
+        $this->assertSame([], $activator->statuses());
     }
 }
